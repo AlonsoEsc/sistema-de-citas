@@ -40,7 +40,7 @@ const envSchema = z.object({
   FACEBOOK_APP_SECRET: z.string().optional(),
   PUBLIC_BOOKING_BASE_URL: z.string().url().default("http://localhost:5174"),
   API_PUBLIC_BASE_URL: z.string().url().default("http://localhost:4000"),
-  DEFAULT_TENANT_ID: z.string().uuid().optional(),
+  DEFAULT_TENANT_ID: z.guid().optional(),
   DEFAULT_TENANT_SLUG: z.string().optional(),
 });
 
