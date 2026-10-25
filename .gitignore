@@ -1,0 +1,29 @@
+# Dependencias y builds
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# Variables de entorno (solo se versionan los .env.example)
+.env
+.env.*
+!.env.example
+
+# Logs y artefactos de herramientas locales
+*.log
+logs/
+.codex-logs/
+.playwright-cli/
+output/
+
+# Editor y sistema operativo
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Configuración local de Claude Code
+.claude/settings.local.json

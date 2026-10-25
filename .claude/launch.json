@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:api"],
+      "port": 4000
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:admin"],
+      "port": 5173
+    },
+    {
+      "name": "booking",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:booking"],
+      "port": 5174
+    }
+  ]
+}
