@@ -1,7 +1,14 @@
-import { PrismaClient } from "@prisma/client";
+import { config } from "dotenv";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { createPrismaClient } from "../src/index";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+config({
+  path: resolve(dirname(fileURLToPath(import.meta.url)), "../../../.env"),
+  quiet: true,
+});
+const prisma = createPrismaClient();
 
 async function main() {
   const tenantId =

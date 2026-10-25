@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { NotificationChannel } from "@prisma/client";
+import type { NotificationChannel } from "@citas/db";
 import { z } from "zod";
 import { PERMISSIONS, requireAuth, requirePermission } from "../lib/auth.js";
 import {

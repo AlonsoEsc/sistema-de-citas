@@ -34,8 +34,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm --workspace apps/api run prisma:generate
-      - run: npm --workspace apps/api run prisma:deploy
+      - run: npm run db:generate
+      - run: npm run db:deploy
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck

@@ -1,4 +1,4 @@
-import type { Appointment, Staff } from "@prisma/client";
+import type { Appointment, Staff } from "@citas/db";
 import type { FastifyInstance } from "fastify";
 import dayjs from "dayjs";
 import { z } from "zod";

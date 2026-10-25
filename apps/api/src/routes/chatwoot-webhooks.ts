@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@citas/db";
 import { z } from "zod";
 import { getChatwootWebhookSecret } from "../services/chatwoot-service.js";
 import {

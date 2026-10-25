@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@citas/db";
 
 declare module "fastify" {
   interface FastifyRequest {

@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@citas/db";
 import { decryptJson } from "../lib/secrets.js";
 
 type ChatwootConfig = {

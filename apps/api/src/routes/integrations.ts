@@ -1,9 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@citas/db";
 import { OAuth2Client } from "google-auth-library";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
-import type { IntegrationProvider, IntegrationScope } from "@prisma/client";
+import type { IntegrationProvider, IntegrationScope } from "@citas/db";
 import { env } from "../config.js";
 import { PERMISSIONS, requireAuth, requirePermission } from "../lib/auth.js";
 import { encryptJson, encryptSecret } from "../lib/secrets.js";

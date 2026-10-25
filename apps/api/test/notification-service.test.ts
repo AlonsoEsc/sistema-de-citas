@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "@citas/db";
 import {
   enabledNotificationChannels,
   normalizePhone,
   queueWhatsappReply,
 } from "../src/services/notification-service.js";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const tenantId = "11111111-1111-1111-1111-111111111111";
 const testKeys: string[] = [];
 

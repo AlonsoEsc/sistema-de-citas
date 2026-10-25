@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "@citas/db";
 import { processInboundWhatsappMessage } from "../src/services/whatsapp-assistant.js";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const tenantId = "11111111-1111-1111-1111-111111111111";
 const phone = "+50379990001";
 const messageIds = ["qa-menu-1", "qa-stop-1", "qa-ignored-1"];

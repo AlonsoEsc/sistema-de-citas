@@ -3,7 +3,7 @@ import type {
   NotificationChannel,
   Prisma,
   PrismaClient,
-} from "@prisma/client";
+} from "@citas/db";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
 

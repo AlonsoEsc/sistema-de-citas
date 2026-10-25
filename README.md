@@ -11,10 +11,11 @@ El nombre comercial es configurable: `VITE_PRODUCT_NAME` en los frontends y
 
 | Carpeta            | Contenido                                                                 |
 | ------------------ | ------------------------------------------------------------------------- |
-| `apps/api`         | API REST: Fastify 5, Prisma 6, PostgreSQL                                 |
+| `apps/api`         | API REST: Fastify 5, Prisma 7, PostgreSQL                                 |
 | `apps/worker`      | Procesa la cola de notificaciones (outbox) con reintentos y recordatorios |
 | `apps/web-admin`   | Panel del negocio: React 18, Vite, Tailwind 4, TanStack Query             |
 | `apps/web-booking` | Portal público de reservas con verificación de teléfono por OTP           |
+| `packages/db`      | Schema de Prisma, migraciones, seed y cliente con aislamiento por tenant  |
 | `packages/shared`  | Código compartido entre apps                                              |
 | `infra/messaging`  | Evolution API (WhatsApp Cloud API) y Chatwoot para atención humana        |
 | `docs/`            | Endpoints, integración de WhatsApp, arquitectura y hoja de ruta           |
@@ -29,9 +30,9 @@ El nombre comercial es configurable: `VITE_PRODUCT_NAME` en los frontends y
 ```bash
 cp .env.example .env          # y ajusta DATABASE_URL, JWT_SECRET y ENCRYPTION_KEY
 npm install
-npm --workspace apps/api run prisma:generate
-npm --workspace apps/api run prisma:deploy
-npm --workspace apps/api run prisma:seed
+npm run db:generate
+npm run db:deploy
+npm run db:seed
 npm run dev
 ```
 
@@ -42,7 +43,7 @@ npm run dev
 | Reservas | http://localhost:5174 |
 
 El seed crea el negocio `demo-barberia` con tres usuarios de prueba (owner, staff y
-recepción). Las credenciales están en `apps/api/prisma/seed.ts` y el panel las precarga
+recepción). Las credenciales están en `packages/db/prisma/seed.ts` y el panel las precarga
 solo en modo desarrollo.
 
 ## Scripts

@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@citas/db";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { forbidden, unauthorized } from "./http-error.js";
 

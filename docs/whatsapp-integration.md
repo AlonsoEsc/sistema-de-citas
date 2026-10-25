@@ -25,9 +25,9 @@ Inbound flow:
 ## Local database
 
 ```bash
-npm --workspace apps/api run prisma:generate
-npm --workspace apps/api run prisma:deploy
-npm --workspace apps/api run prisma:seed
+npm run db:generate
+npm run db:deploy
+npm run db:seed
 ```
 
 ## Messaging infrastructure

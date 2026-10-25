@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@citas/db";
 import { PERMISSIONS, requireAuth, requirePermission } from "../lib/auth.js";
 import { badRequest, notFound } from "../lib/http-error.js";
 

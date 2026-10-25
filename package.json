@@ -19,7 +19,11 @@
     "format": "prettier --write .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "format:check": "prettier --check .",
-    "check": "npm run lint && npm run typecheck && npm test"
+    "check": "npm run lint && npm run typecheck && npm test",
+    "db:generate": "npm --workspace packages/db run generate",
+    "db:migrate": "npm --workspace packages/db run migrate:dev",
+    "db:deploy": "npm --workspace packages/db run migrate:deploy",
+    "db:seed": "npm --workspace packages/db run seed"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "@citas/db";
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 import { corsOrigins, env } from "./config.js";
@@ -23,7 +23,7 @@ import { whatsappWebhookRoutes } from "./routes/whatsapp-webhooks.js";
 import { chatwootWebhookRoutes } from "./routes/chatwoot-webhooks.js";
 import { messagingRoutes } from "./routes/messaging.js";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient({ connectionString: env.DATABASE_URL });
 
 function redactSensitiveQuery(url: string) {
   return url.replace(

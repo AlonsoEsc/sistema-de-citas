@@ -1,4 +1,10 @@
-import type { Appointment, StaffSchedule } from "@prisma/client";
+import type { Appointment, StaffSchedule } from "@citas/db";
+
+type BusyInterval = Pick<Appointment, "startAt" | "endAt">;
+type ScheduleSegment = Pick<
+  StaffSchedule,
+  "startTime" | "endTime" | "breakJson"
+>;
 import {
   combineDateAndMinutes,
   parseTimeToMinutes,
@@ -34,7 +40,7 @@ function isInsideBreak(
 function overlapsExisting(
   slotStart: Date,
   slotEnd: Date,
-  appointments: Appointment[],
+  appointments: BusyInterval[],
 ): boolean {
   return appointments.some(
     (appointment) =>
@@ -45,8 +51,8 @@ function overlapsExisting(
 export function buildAvailabilityForStaff(
   date: string,
   durationMinutes: number,
-  schedule: StaffSchedule[],
-  appointments: Appointment[],
+  schedule: ScheduleSegment[],
+  appointments: BusyInterval[],
 ) {
   const slots: { startAt: string; endAt: string }[] = [];
 

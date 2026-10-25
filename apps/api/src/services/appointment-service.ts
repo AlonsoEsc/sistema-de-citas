@@ -3,7 +3,7 @@ import type {
   NotificationChannel,
   Prisma,
   PrismaClient,
-} from "@prisma/client";
+} from "@citas/db";
 import { badRequest, conflict, notFound } from "../lib/http-error.js";
 import { queueAppointmentNotifications } from "./notification-service.js";
 

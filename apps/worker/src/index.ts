@@ -5,10 +5,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   Prisma,
-  PrismaClient,
+  createPrismaClient,
   type NotificationChannel,
   type NotificationOutbox,
-} from "@prisma/client";
+} from "@citas/db";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(currentDir, "../../../.env") });
@@ -20,7 +20,7 @@ for (const [key, value] of Object.entries(localEnv)) {
   }
 }
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const POLL_INTERVAL_MS = 15_000;
 const MAX_BATCH = 25;
 const WORKER_ID = `${hostname()}:${process.pid}`;
