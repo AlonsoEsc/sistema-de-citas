@@ -42,6 +42,16 @@ const envSchema = z.object({
   API_PUBLIC_BASE_URL: z.string().url().default("http://localhost:4000"),
   DEFAULT_TENANT_ID: z.guid().optional(),
   DEFAULT_TENANT_SLUG: z.string().optional(),
+  // Documentacion OpenAPI en /docs. Por defecto solo fuera de produccion.
+  API_DOCS_ENABLED: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
+  // Proveedores globales de la plataforma (opcionales; el worker registra en log si faltan).
+  SENDGRID_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
@@ -59,6 +69,13 @@ if (env.NODE_ENV === "production") {
     throw new Error("ENCRYPTION_KEY sigue con el valor de ejemplo");
   }
 }
+
+export const isProduction = env.NODE_ENV === "production";
+
+export const apiDocsEnabled =
+  process.env.API_DOCS_ENABLED === undefined
+    ? !isProduction
+    : env.API_DOCS_ENABLED;
 
 export const corsOrigins: true | string[] = env.CORS_ORIGINS
   ? env.CORS_ORIGINS.split(",")

@@ -1,128 +1,99 @@
-import Fastify from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
-import { createPrismaClient } from "@citas/db";
+import { createPrismaClient, type PrismaClient } from "@citas/db";
+import Fastify from "fastify";
+import {
+  serializerCompiler,
+  validatorCompiler,
+} from "fastify-type-provider-zod";
 import { randomUUID } from "node:crypto";
-import { ZodError } from "zod";
-import { corsOrigins, env } from "./config.js";
-import { HttpError } from "./lib/http-error.js";
-import { authRoutes } from "./routes/auth.js";
-import { tenantRoutes } from "./routes/tenants.js";
-import { staffRoutes } from "./routes/staff.js";
-import { serviceRoutes } from "./routes/services.js";
-import { customerRoutes } from "./routes/customers.js";
-import { appointmentRoutes } from "./routes/appointments.js";
-import { publicBookingRoutes } from "./routes/public-booking.js";
-import { publicAuthRoutes } from "./routes/public-auth.js";
-import { notificationRoutes } from "./routes/notifications.js";
-import { planRoutes } from "./routes/plans.js";
-import { reportRoutes } from "./routes/reports.js";
-import { integrationRoutes } from "./routes/integrations.js";
-import { scheduledReportRoutes } from "./routes/scheduled-reports.js";
-import { whatsappWebhookRoutes } from "./routes/whatsapp-webhooks.js";
-import { chatwootWebhookRoutes } from "./routes/chatwoot-webhooks.js";
-import { messagingRoutes } from "./routes/messaging.js";
+import { apiDocsEnabled, corsOrigins, env, isProduction } from "./config.js";
+import { authRoutes } from "./modules/auth/auth.routes.js";
+import { billingRoutes } from "./modules/billing/billing.routes.js";
+import { catalogRoutes } from "./modules/catalog/catalog.routes.js";
+import { customerRoutes } from "./modules/customers/customers.routes.js";
+import { integrationRoutes } from "./modules/integrations/integrations.routes.js";
+import { conversationRoutes } from "./modules/messaging/conversations.routes.js";
+import { webhookRoutes } from "./modules/messaging/webhooks.routes.js";
+import { templateRoutes } from "./modules/notifications/templates.routes.js";
+import { portalRoutes } from "./modules/portal/portal.routes.js";
+import { reportRoutes } from "./modules/reports/reports.routes.js";
+import { appointmentRoutes } from "./modules/scheduling/appointments.routes.js";
+import { tenancyRoutes } from "./modules/tenancy/tenancy.routes.js";
+import { registerErrorHandler } from "./plugins/error-handler.js";
+import { registerOpenApi } from "./plugins/openapi.js";
 
-const prisma = createPrismaClient({ connectionString: env.DATABASE_URL });
+const SENSITIVE_QUERY = /([?&](?:token|apikey|api_key|access_token)=)[^&]*/gi;
 
-function redactSensitiveQuery(url: string) {
-  return url.replace(
-    /([?&](?:token|apikey|api_key|access_token)=)[^&]*/gi,
-    "$1[REDACTED]",
-  );
-}
+export type BuildAppOptions = {
+  /** Permite inyectar un cliente (tests); por defecto se crea uno con DATABASE_URL. */
+  prisma?: PrismaClient;
+};
 
-export async function buildApp() {
+/** Raiz de composicion: plugins transversales y modulos de la API. */
+export async function buildApp(options: BuildAppOptions = {}) {
+  const prisma =
+    options.prisma ??
+    createPrismaClient({ connectionString: env.DATABASE_URL });
+
   const app = Fastify({
+    genReqId: (request) =>
+      String(request.headers["x-correlation-id"] ?? randomUUID()),
     logger: {
-      level: env.NODE_ENV === "production" ? "info" : "debug",
+      level: isProduction ? "info" : "debug",
+      redact: ["req.headers.authorization", "req.headers.apikey"],
       serializers: {
         req(request) {
           return {
             method: request.method,
-            url: redactSensitiveQuery(request.url),
-            host: request.headers.host,
+            url: request.url.replace(SENSITIVE_QUERY, "$1[REDACTED]"),
             remoteAddress: request.ip,
-            remotePort: request.socket.remotePort,
           };
         },
       },
     },
   });
 
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
   app.decorate("prisma", prisma);
-
-  await app.register(cors, {
-    origin: corsOrigins,
+  app.addHook("onSend", async (request, reply) => {
+    reply.header("x-correlation-id", request.id);
+  });
+  app.addHook("onClose", async () => {
+    if (!options.prisma) {
+      await prisma.$disconnect();
+    }
   });
 
-  await app.register(jwt, {
-    secret: env.JWT_SECRET,
-  });
+  await app.register(cors, { origin: corsOrigins });
+  await app.register(jwt, { secret: env.JWT_SECRET });
+  if (apiDocsEnabled) {
+    await registerOpenApi(app);
+  }
+  registerErrorHandler(app);
 
-  app.addHook("onRequest", async (request) => {
-    const correlationId = request.headers["x-correlation-id"] ?? randomUUID();
-    request.headers["x-correlation-id"] = String(correlationId);
-  });
-
-  app.get("/health", async () => ({
+  app.get("/health", { schema: { hide: true } }, async () => ({
     ok: true,
     timestamp: new Date().toISOString(),
   }));
 
-  await authRoutes(app);
-  await tenantRoutes(app);
-  await staffRoutes(app);
-  await serviceRoutes(app);
-  await customerRoutes(app);
-  await appointmentRoutes(app);
-  await publicAuthRoutes(app);
-  await publicBookingRoutes(app);
-  await notificationRoutes(app);
-  await planRoutes(app);
-  await reportRoutes(app);
-  await integrationRoutes(app);
-  await scheduledReportRoutes(app);
-  await whatsappWebhookRoutes(app);
-  await chatwootWebhookRoutes(app);
-  await messagingRoutes(app);
-
-  app.setErrorHandler((error, request, reply) => {
-    if (error instanceof HttpError) {
-      return reply.status(error.statusCode).send({
-        error: error.code,
-        message: error.message,
-      });
-    }
-
-    if (typeof (error as { statusCode?: number }).statusCode === "number") {
-      const statusCode = (error as { statusCode: number }).statusCode;
-      if (statusCode >= 400 && statusCode < 500) {
-        return reply.status(statusCode).send({
-          error: (error as { code?: string }).code ?? "REQUEST_ERROR",
-          message: (error as { message?: string }).message ?? "Request error",
-        });
-      }
-    }
-
-    if (error instanceof ZodError) {
-      return reply.status(400).send({
-        error: "VALIDATION_ERROR",
-        message: "Datos invalidos",
-        detail: error.issues,
-      });
-    }
-
-    request.log.error(error);
-    return reply.status(500).send({
-      error: "INTERNAL_SERVER_ERROR",
-      message: "Error interno",
-    });
-  });
-
-  app.addHook("onClose", async () => {
-    await prisma.$disconnect();
-  });
+  for (const routes of [
+    authRoutes,
+    tenancyRoutes,
+    catalogRoutes,
+    customerRoutes,
+    appointmentRoutes,
+    portalRoutes,
+    templateRoutes,
+    billingRoutes,
+    reportRoutes,
+    integrationRoutes,
+    conversationRoutes,
+    webhookRoutes,
+  ]) {
+    await app.register(routes);
+  }
 
   return app;
 }

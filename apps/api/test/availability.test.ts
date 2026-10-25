@@ -1,26 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { StaffSchedule } from "@citas/db";
-import { buildAvailabilityForStaff } from "../src/services/availability.js";
+import { buildAvailabilityForStaff } from "../src/modules/scheduling/availability.js";
+
+const EL_SALVADOR = "America/El_Salvador";
 
 function schedule(
   startTime: string,
   endTime: string,
-  breakJson: unknown = null,
-): StaffSchedule {
-  return {
-    id: "11111111-1111-1111-1111-111111111111",
-    tenantId: "11111111-1111-1111-1111-111111111111",
-    staffId: "22222222-2222-2222-2222-222222222222",
-    dayOfWeek: 1,
-    startTime,
-    endTime,
-    breakJson,
-  } as StaffSchedule;
+  breakJson: Array<{ start: string; end: string }> | null = null,
+) {
+  return { startTime, endTime, breakJson };
 }
 
-function appointment(startAt: Date, endAt: Date) {
-  return { startAt, endAt };
+/** Hora local "HH:mm" de un instante en la zona indicada. */
+function localTime(iso: string, timeZone = EL_SALVADOR) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
 }
 
 test("genera intervalos cada 15 minutos dentro de la jornada", () => {
@@ -29,34 +27,31 @@ test("genera intervalos cada 15 minutos dentro de la jornada", () => {
     30,
     [schedule("09:00", "10:00")],
     [],
+    EL_SALVADOR,
   );
 
-  assert.equal(slots.length, 3);
   assert.deepEqual(
-    slots.map((slot) => new Date(slot.startAt).getHours()),
-    [9, 9, 9],
-  );
-  assert.deepEqual(
-    slots.map((slot) => new Date(slot.startAt).getMinutes()),
-    [0, 15, 30],
+    slots.map((slot) => localTime(slot.startAt)),
+    ["09:00", "09:15", "09:30"],
   );
 });
 
 test("excluye descansos y citas que se superponen", () => {
-  const date = "2030-01-07";
-  const existing = appointment(
-    new Date(`${date}T09:00:00`),
-    new Date(`${date}T09:30:00`),
-  );
   const slots = buildAvailabilityForStaff(
-    date,
+    "2030-01-07",
     30,
     [schedule("09:00", "11:00", [{ start: "10:00", end: "10:30" }])],
-    [existing],
+    [
+      {
+        startAt: new Date("2030-01-07T15:00:00Z"),
+        endAt: new Date("2030-01-07T15:30:00Z"),
+      },
+    ],
+    EL_SALVADOR,
   );
 
   assert.deepEqual(
-    slots.map((slot) => new Date(slot.startAt).toTimeString().slice(0, 5)),
+    slots.map((slot) => localTime(slot.startAt)),
     ["09:30", "10:30"],
   );
 });
@@ -67,11 +62,29 @@ test("no crea espacios que excedan el cierre", () => {
     45,
     [schedule("09:00", "10:00")],
     [],
+    EL_SALVADOR,
   );
 
   assert.equal(slots.length, 2);
-  assert.equal(
-    new Date(slots.at(-1)!.endAt).toTimeString().slice(0, 5),
-    "10:00",
+  assert.equal(localTime(slots.at(-1)!.endAt), "10:00");
+});
+
+test("usa la zona horaria del negocio, no la del servidor", () => {
+  const [tokyo] = buildAvailabilityForStaff(
+    "2030-01-07",
+    30,
+    [schedule("09:00", "09:30")],
+    [],
+    "Asia/Tokyo",
   );
+  const [salvador] = buildAvailabilityForStaff(
+    "2030-01-07",
+    30,
+    [schedule("09:00", "09:30")],
+    [],
+    EL_SALVADOR,
+  );
+
+  assert.equal(tokyo.startAt, "2030-01-07T00:00:00.000Z");
+  assert.equal(salvador.startAt, "2030-01-07T15:00:00.000Z");
 });

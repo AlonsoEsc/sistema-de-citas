@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { randomUUID } from "node:crypto";
 import { createPrismaClient } from "@citas/db";
-import { processInboundWhatsappMessage } from "../src/services/whatsapp-assistant.js";
+import { processInboundWhatsappMessage } from "../src/modules/messaging/assistant/index.js";
 
 const prisma = createPrismaClient();
 const tenantId = "77777777-7777-4777-8777-777777777777";

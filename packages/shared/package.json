@@ -3,11 +3,24 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "main": "src/index.ts",
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "types": "src/index.ts"
+  "exports": {
+    ".": "./src/index.ts",
+    "./phone": "./src/phone.ts",
+    "./time": "./src/time.ts",
+    "./notifications": "./src/notifications.ts",
+    "./crypto": "./src/crypto.ts",
+    "./integrations": "./src/integrations.ts"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2"
+  }
 }

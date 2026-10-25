@@ -1,3 +1,4 @@
+import type { ITXClientDenyList } from "@prisma/client/runtime/client";
 import type { Prisma, PrismaClient } from "./generated/prisma/client";
 
 /**
@@ -104,3 +105,9 @@ export function forTenant(prisma: PrismaClient, tenantId: string) {
 }
 
 export type TenantDb = ReturnType<typeof forTenant>;
+
+/**
+ * Cliente filtrado por tenant dentro de una transaccion interactiva. Un TenantDb tambien es
+ * asignable a este tipo, asi que las funciones que reciben TenantTx sirven en ambos casos.
+ */
+export type TenantTx = Omit<TenantDb, ITXClientDenyList>;

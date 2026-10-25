@@ -1,14 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createPrismaClient } from "@citas/db";
+import { normalizePhone } from "@citas/shared/phone";
 import {
   enabledNotificationChannels,
-  normalizePhone,
   queueWhatsappReply,
-} from "../src/services/notification-service.js";
+} from "../src/modules/notifications/notification.service.js";
+import { tenantScope } from "../src/shared/tenant-scope.js";
 
 const prisma = createPrismaClient();
 const tenantId = "11111111-1111-1111-1111-111111111111";
+const scope = tenantScope(prisma, tenantId);
 const testKeys: string[] = [];
 
 test.after(async () => {
@@ -27,7 +29,7 @@ test("normaliza números telefónicos sin perder el prefijo internacional", () =
 });
 
 test("respeta opt-out al seleccionar canales habilitados", async () => {
-  const enabled = await enabledNotificationChannels(prisma, tenantId, {
+  const enabled = await enabledNotificationChannels(scope, {
     phone: "+50370001234",
     email: "qa@example.com",
     whatsappOptOutAt: null,
@@ -35,7 +37,7 @@ test("respeta opt-out al seleccionar canales habilitados", async () => {
   assert.ok(enabled.includes("whatsapp"));
   assert.ok(enabled.includes("email"));
 
-  const optedOut = await enabledNotificationChannels(prisma, tenantId, {
+  const optedOut = await enabledNotificationChannels(scope, {
     phone: "+50370001234",
     email: "qa@example.com",
     whatsappOptOutAt: new Date(),
@@ -47,14 +49,13 @@ test("la cola de WhatsApp es idempotente", async () => {
   const key = `${tenantId}:qa:notification-idempotency`;
   testKeys.push(key);
   const input = {
-    tenantId,
     phone: "503 7000-1234",
     message: "Mensaje QA",
     idempotencyKey: key,
   };
 
-  const first = await queueWhatsappReply(prisma, input);
-  const second = await queueWhatsappReply(prisma, input);
+  const first = await queueWhatsappReply(scope, input);
+  const second = await queueWhatsappReply(scope, input);
 
   assert.equal(first.id, second.id);
   assert.equal(first.to, "+50370001234");

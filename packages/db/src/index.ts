@@ -5,4 +5,5 @@ export {
   forTenant,
   TENANT_SCOPED_MODELS,
   type TenantDb,
+  type TenantTx,
 } from "./tenant-scope";

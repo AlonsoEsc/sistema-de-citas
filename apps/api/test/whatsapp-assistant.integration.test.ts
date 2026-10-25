@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createPrismaClient } from "@citas/db";
-import { processInboundWhatsappMessage } from "../src/services/whatsapp-assistant.js";
+import { processInboundWhatsappMessage } from "../src/modules/messaging/assistant/index.js";
 
 const prisma = createPrismaClient();
 const tenantId = "11111111-1111-1111-1111-111111111111";
