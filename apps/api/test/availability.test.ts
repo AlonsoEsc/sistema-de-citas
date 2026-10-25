@@ -83,5 +83,8 @@ test("no crea espacios que excedan el cierre", () => {
   );
 
   assert.equal(slots.length, 2);
-  assert.equal(new Date(slots.at(-1)!.endAt).toTimeString().slice(0, 5), "10:00");
+  assert.equal(
+    new Date(slots.at(-1)!.endAt).toTimeString().slice(0, 5),
+    "10:00",
+  );
 });

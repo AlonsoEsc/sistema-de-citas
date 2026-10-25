@@ -8,8 +8,8 @@ export default tseslint.config(
       "**/dist/**",
       "**/node_modules/**",
       "**/*.js",
-      "**/*.tsbuildinfo"
-    ]
+      "**/*.tsbuildinfo",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -20,28 +20,31 @@ export default tseslint.config(
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_"
-        }
-      ]
-    }
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
   },
   {
     files: ["apps/api/src/**/*.ts", "apps/worker/src/**/*.ts"],
     languageOptions: {
       globals: {
-        ...globals.node
-      }
-    }
+        ...globals.node,
+      },
+    },
   },
   {
-    files: ["apps/web-admin/src/**/*.{ts,tsx}", "apps/web-booking/src/**/*.{ts,tsx}"],
+    files: [
+      "apps/web-admin/src/**/*.{ts,tsx}",
+      "apps/web-booking/src/**/*.{ts,tsx}",
+    ],
     languageOptions: {
       globals: {
-        ...globals.browser
-      }
+        ...globals.browser,
+      },
     },
     rules: {
-      "@typescript-eslint/no-empty-object-type": "off"
-    }
-  }
+      "@typescript-eslint/no-empty-object-type": "off",
+    },
+  },
 );

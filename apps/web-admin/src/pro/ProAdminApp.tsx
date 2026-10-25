@@ -7,9 +7,7 @@ import Reportes from "./components/Reportes";
 import Ajustes from "./components/Ajustes";
 import PortalClientes from "./components/PortalClientes";
 import Conversations from "./components/Conversations";
-import UnifiedShell, {
-  type AdminTheme,
-} from "./components/UnifiedShell";
+import UnifiedShell, { type AdminTheme } from "./components/UnifiedShell";
 import { api } from "../lib/api";
 import { useAuth } from "../state/auth";
 import "./unified-shell.css";
@@ -662,150 +660,149 @@ export function ProAdminApp() {
       hiddenTabs={hiddenTabs}
     >
       <>
-          {isLoading && (
-            <div className="mb-4 rounded-2xl border border-[#2a2a2a] bg-[#121212] p-4 text-xs font-bold text-gray-400">
-              Cargando datos reales de {session?.tenant.name ?? "tu negocio"}...
-            </div>
-          )}
+        {isLoading && (
+          <div className="mb-4 rounded-2xl border border-[#2a2a2a] bg-[#121212] p-4 text-xs font-bold text-gray-400">
+            Cargando datos reales de {session?.tenant.name ?? "tu negocio"}...
+          </div>
+        )}
 
-          {activeTab === "conversaciones" && (
-            <Conversations
-              clients={clients}
-              appointments={appointments}
-              onConfirmWithoutNotifications={async (id) => {
-                await updateAppointmentStatus.mutateAsync({
-                  id,
-                  status: "confirmed",
-                });
-              }}
-              onNavigate={setActiveTab}
-            />
-          )}
+        {activeTab === "conversaciones" && (
+          <Conversations
+            clients={clients}
+            appointments={appointments}
+            onConfirmWithoutNotifications={async (id) => {
+              await updateAppointmentStatus.mutateAsync({
+                id,
+                status: "confirmed",
+              });
+            }}
+            onNavigate={setActiveTab}
+          />
+        )}
 
-          {activeTab === "resumen" && (
-            <Dashboard
-              appointments={appointments}
-              professionals={professionals}
-              services={services}
-            />
-          )}
+        {activeTab === "resumen" && (
+          <Dashboard
+            appointments={appointments}
+            professionals={professionals}
+            services={services}
+          />
+        )}
 
-          {activeTab === "agenda" && (
-            <Agenda
-              appointments={appointments}
-              professionals={professionals}
-              services={services}
-              clients={clients}
-              onAddAppointment={(appointment) =>
-                createAppointment.mutate(appointment)
-              }
-              onUpdateAppointmentStatus={(id, status) =>
-                updateAppointmentStatus.mutate({ id, status })
-              }
-              onDeleteAppointment={(id) => deleteAppointment.mutate(id)}
-            />
-          )}
+        {activeTab === "agenda" && (
+          <Agenda
+            appointments={appointments}
+            professionals={professionals}
+            services={services}
+            clients={clients}
+            onAddAppointment={(appointment) =>
+              createAppointment.mutate(appointment)
+            }
+            onUpdateAppointmentStatus={(id, status) =>
+              updateAppointmentStatus.mutate({ id, status })
+            }
+            onDeleteAppointment={(id) => deleteAppointment.mutate(id)}
+          />
+        )}
 
-          {activeTab === "catalogos" && (
-            <Catalogos
-              professionals={professionals}
-              services={services}
-              clients={clients}
-              onAddProfessional={(name) => createStaff.mutate(name)}
-              onDeleteProfessional={(id) => deactivateStaff.mutate(id)}
-              onAddService={(service) => createService.mutate(service)}
-              onDeleteService={(id) => deactivateService.mutate(id)}
-              onAddClient={(client) => createClient.mutate(client)}
-              onDeleteClient={() => {
-                window.alert(
-                  "El backend aún no tiene endpoint para eliminar clientes; por ahora se conservan por historial.",
-                );
-              }}
-            />
-          )}
+        {activeTab === "catalogos" && (
+          <Catalogos
+            professionals={professionals}
+            services={services}
+            clients={clients}
+            onAddProfessional={(name) => createStaff.mutate(name)}
+            onDeleteProfessional={(id) => deactivateStaff.mutate(id)}
+            onAddService={(service) => createService.mutate(service)}
+            onDeleteService={(id) => deactivateService.mutate(id)}
+            onAddClient={(client) => createClient.mutate(client)}
+            onDeleteClient={() => {
+              window.alert(
+                "El backend aún no tiene endpoint para eliminar clientes; por ahora se conservan por historial.",
+              );
+            }}
+          />
+        )}
 
-          {activeTab === "reportes" && canViewReports && (
-            <Reportes
-              appointments={appointments}
-              professionals={professionals}
-              services={services}
-              scheduledReports={scheduledReports}
-              onAddScheduledReport={(report) =>
-                createScheduledReport.mutate(report)
-              }
-              onDeleteScheduledReport={(id) => deleteScheduledReport.mutate(id)}
-            />
-          )}
+        {activeTab === "reportes" && canViewReports && (
+          <Reportes
+            appointments={appointments}
+            professionals={professionals}
+            services={services}
+            scheduledReports={scheduledReports}
+            onAddScheduledReport={(report) =>
+              createScheduledReport.mutate(report)
+            }
+            onDeleteScheduledReport={(id) => deleteScheduledReport.mutate(id)}
+          />
+        )}
 
-          {activeTab === "ajustes" && canManageSettings && (
-            <Ajustes
-              subscription={subscriptionQuery.data}
-              notifications={notifications}
-              onToggleNotification={() => {
-                window.alert(
-                  "La activación/desactivación visual está pendiente de persistencia en backend.",
-                );
-              }}
-              onUpdateNotificationContent={(id, content) =>
-                updateTemplate.mutate({ id, content })
-              }
-              onUpdateWhatsappProviderTemplate={async (
+        {activeTab === "ajustes" && canManageSettings && (
+          <Ajustes
+            subscription={subscriptionQuery.data}
+            notifications={notifications}
+            onToggleNotification={() => {
+              window.alert(
+                "La activación/desactivación visual está pendiente de persistencia en backend.",
+              );
+            }}
+            onUpdateNotificationContent={(id, content) =>
+              updateTemplate.mutate({ id, content })
+            }
+            onUpdateWhatsappProviderTemplate={async (
+              id,
+              name,
+              language,
+              parameterOrder,
+            ) => {
+              await updateProviderTemplate.mutateAsync({
                 id,
                 name,
                 language,
                 parameterOrder,
-              ) => {
-                await updateProviderTemplate.mutateAsync({
-                  id,
-                  name,
-                  language,
-                  parameterOrder,
-                });
-              }}
-              integration={{
-                ...effectiveIntegration,
-                googleCalendar: {
-                  ...effectiveIntegration.googleCalendar,
-                  accountEmail:
-                    effectiveIntegration.googleCalendar.accountEmail ??
-                    session?.user.email,
-                },
-              }}
-              onUpdateIntegration={persistIntegrationStatus}
-              onConnectWhatsapp={async () => {
-                window.alert(
-                  "WhatsApp está pausado por seguridad. La configuración se conserva, pero no se iniciará la conexión.",
-                );
-              }}
-              onDisconnectWhatsapp={async () => {
-                await disconnectWhatsapp.mutateAsync();
-              }}
-              whatsappLastError={whatsappSetupQuery.data?.lastError}
-              onConnectChatwoot={async (config) => {
-                await connectChatwoot.mutateAsync(config);
-              }}
-              onDisconnectChatwoot={async () => {
-                await disconnectChatwoot.mutateAsync();
-              }}
-            />
-          )}
+              });
+            }}
+            integration={{
+              ...effectiveIntegration,
+              googleCalendar: {
+                ...effectiveIntegration.googleCalendar,
+                accountEmail:
+                  effectiveIntegration.googleCalendar.accountEmail ??
+                  session?.user.email,
+              },
+            }}
+            onUpdateIntegration={persistIntegrationStatus}
+            onConnectWhatsapp={async () => {
+              window.alert(
+                "WhatsApp está pausado por seguridad. La configuración se conserva, pero no se iniciará la conexión.",
+              );
+            }}
+            onDisconnectWhatsapp={async () => {
+              await disconnectWhatsapp.mutateAsync();
+            }}
+            whatsappLastError={whatsappSetupQuery.data?.lastError}
+            onConnectChatwoot={async (config) => {
+              await connectChatwoot.mutateAsync(config);
+            }}
+            onDisconnectChatwoot={async () => {
+              await disconnectChatwoot.mutateAsync();
+            }}
+          />
+        )}
 
-          {activeTab === "portal" && (
-            <PortalClientes
-              appointments={appointments}
-              professionals={professionals}
-              services={services}
-              clients={clients}
-              onAddAppointment={(appointment) =>
-                createAppointment.mutate(appointment)
-              }
-              onAddClient={(client) => createClient.mutate(client)}
-              onCancelAppointment={(id) =>
-                updateAppointmentStatus.mutate({ id, status: "cancelled" })
-              }
-            />
-          )}
-
+        {activeTab === "portal" && (
+          <PortalClientes
+            appointments={appointments}
+            professionals={professionals}
+            services={services}
+            clients={clients}
+            onAddAppointment={(appointment) =>
+              createAppointment.mutate(appointment)
+            }
+            onAddClient={(client) => createClient.mutate(client)}
+            onCancelAppointment={(id) =>
+              updateAppointmentStatus.mutate({ id, status: "cancelled" })
+            }
+          />
+        )}
       </>
     </UnifiedShell>
   );

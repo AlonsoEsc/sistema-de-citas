@@ -78,22 +78,27 @@ export default function UnifiedShell({
           <CalendarBlank size={24} weight="bold" />
         </button>
         <nav>
-          {navItems.filter((item) => !hiddenTabs.includes(item.id)).map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={activeTab === item.id ? "active" : ""}
-                aria-label={item.label}
-                title={item.label}
-                onClick={() => setActiveTab(item.id)}
-              >
-                <Icon size={22} weight={activeTab === item.id ? "fill" : "regular"} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+          {navItems
+            .filter((item) => !hiddenTabs.includes(item.id))
+            .map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={activeTab === item.id ? "active" : ""}
+                  aria-label={item.label}
+                  title={item.label}
+                  onClick={() => setActiveTab(item.id)}
+                >
+                  <Icon
+                    size={22}
+                    weight={activeTab === item.id ? "fill" : "regular"}
+                  />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
         </nav>
         <button
           className="unified-logout"
@@ -109,7 +114,9 @@ export default function UnifiedShell({
       <section className="unified-workspace">
         <header className="unified-topbar">
           <div className="unified-wordmark">
-            <span><Sparkle size={17} weight="fill" /></span>
+            <span>
+              <Sparkle size={17} weight="fill" />
+            </span>
             <div>
               <strong>{PRODUCT_NAME}</strong>
               <small>{tenantName}</small>
@@ -117,7 +124,9 @@ export default function UnifiedShell({
           </div>
 
           <div className="unified-paused-banner">
-            <span><Pause size={18} weight="fill" /></span>
+            <span>
+              <Pause size={18} weight="fill" />
+            </span>
             <div>
               <strong>WhatsApp pausado</strong>
               <small>No se enviarán mensajes ni respuestas automáticas.</small>
@@ -173,7 +182,9 @@ export default function UnifiedShell({
           </button>
         </header>
 
-        <div className={`unified-stage ${activeTab === "conversaciones" ? "conversation-stage" : "module-stage"}`}>
+        <div
+          className={`unified-stage ${activeTab === "conversaciones" ? "conversation-stage" : "module-stage"}`}
+        >
           {children}
         </div>
       </section>

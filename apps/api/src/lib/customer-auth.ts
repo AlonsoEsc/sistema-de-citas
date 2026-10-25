@@ -9,7 +9,10 @@ type BookingCustomerPayload = {
   email?: string;
 };
 
-export async function requireBookingCustomerAuth(request: FastifyRequest, _reply: FastifyReply) {
+export async function requireBookingCustomerAuth(
+  request: FastifyRequest,
+  _reply: FastifyReply,
+) {
   try {
     const payload = await request.jwtVerify<BookingCustomerPayload>();
     if (payload.type !== "booking_customer") {
@@ -17,6 +20,9 @@ export async function requireBookingCustomerAuth(request: FastifyRequest, _reply
     }
     request.customerAuth = payload;
   } catch {
-    throw unauthorized("Necesitas verificar tu telefono para continuar", "BOOKING_AUTH_REQUIRED");
+    throw unauthorized(
+      "Necesitas verificar tu telefono para continuar",
+      "BOOKING_AUTH_REQUIRED",
+    );
   }
 }

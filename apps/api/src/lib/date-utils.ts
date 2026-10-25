@@ -13,6 +13,6 @@ export function combineDateAndMinutes(date: string, minutes: number): Date {
 export function toCurrency(valueCents: number, currency = "MXN") {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
-    currency
+    currency,
   }).format(valueCents / 100);
 }

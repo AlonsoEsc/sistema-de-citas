@@ -9,5 +9,5 @@ document.title = `${PRODUCT_NAME} · Panel administrativo`;
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>
+  </React.StrictMode>,
 );

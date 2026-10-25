@@ -59,7 +59,10 @@ test("MENU genera una sola respuesta y los reintentos se deduplican", async () =
     },
   });
   assert.ok(reply);
-  assert.match(String((reply.payloadJson as { message: string }).message), /AGENDAR/);
+  assert.match(
+    String((reply.payloadJson as { message: string }).message),
+    /AGENDAR/,
+  );
 
   const duplicate = await inbound("qa-menu-1", "MENÚ");
   assert.equal(duplicate.duplicate, true);

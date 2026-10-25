@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Professional, Service, Client } from '../types';
-import { Plus, Trash2, Search, User, Briefcase, Smile } from 'lucide-react';
+import React, { useState } from "react";
+import { Professional, Service, Client } from "../types";
+import { Plus, Trash2, Search, User, Briefcase, Smile } from "lucide-react";
 
 interface CatalogosProps {
   professionals: Professional[];
@@ -8,9 +8,9 @@ interface CatalogosProps {
   clients: Client[];
   onAddProfessional: (name: string) => void;
   onDeleteProfessional: (id: string) => void;
-  onAddService: (service: Omit<Service, 'id'>) => void;
+  onAddService: (service: Omit<Service, "id">) => void;
   onDeleteService: (id: string) => void;
-  onAddClient: (client: Omit<Client, 'id'>) => void;
+  onAddClient: (client: Omit<Client, "id">) => void;
   onDeleteClient: (id: string) => void;
 }
 
@@ -23,29 +23,29 @@ export default function Catalogos({
   onAddService,
   onDeleteService,
   onAddClient,
-  onDeleteClient
+  onDeleteClient,
 }: CatalogosProps) {
   // Professionals form state
-  const [profName, setProfName] = useState('');
+  const [profName, setProfName] = useState("");
 
   // Services form state
-  const [srvName, setSrvName] = useState('');
-  const [srvDuration, setSrvDuration] = useState('45');
-  const [srvPrice, setSrvPrice] = useState('250.00'); // Dollars for ease
+  const [srvName, setSrvName] = useState("");
+  const [srvDuration, setSrvDuration] = useState("45");
+  const [srvPrice, setSrvPrice] = useState("250.00"); // Dollars for ease
 
   // Clients form state
-  const [cliName, setCliName] = useState('');
-  const [cliPhone, setCliPhone] = useState('');
-  const [cliEmail, setCliEmail] = useState('');
+  const [cliName, setCliName] = useState("");
+  const [cliPhone, setCliPhone] = useState("");
+  const [cliEmail, setCliEmail] = useState("");
 
   // Search filter for clients
-  const [searchClient, setSearchClient] = useState('');
+  const [searchClient, setSearchClient] = useState("");
 
   const submitProfessional = (e: React.FormEvent) => {
     e.preventDefault();
     if (!profName.trim()) return;
     onAddProfessional(profName.trim());
-    setProfName('');
+    setProfName("");
   };
 
   const submitService = (e: React.FormEvent) => {
@@ -54,9 +54,9 @@ export default function Catalogos({
     const duration = parseInt(srvDuration) || 30;
     const price = parseFloat(srvPrice) || 0;
     onAddService({ name: srvName.trim(), duration, price });
-    setSrvName('');
-    setSrvDuration('45');
-    setSrvPrice('250.00');
+    setSrvName("");
+    setSrvDuration("45");
+    setSrvPrice("250.00");
   };
 
   const submitClient = (e: React.FormEvent) => {
@@ -65,16 +65,19 @@ export default function Catalogos({
     onAddClient({
       name: cliName.trim(),
       phone: cliPhone.trim(),
-      email: cliEmail.trim() || `${cliName.trim().toLowerCase().replace(/\s+/g, '')}@example.com`
+      email:
+        cliEmail.trim() ||
+        `${cliName.trim().toLowerCase().replace(/\s+/g, "")}@example.com`,
     });
-    setCliName('');
-    setCliPhone('');
-    setCliEmail('');
+    setCliName("");
+    setCliPhone("");
+    setCliEmail("");
   };
 
-  const filteredClients = clients.filter(c =>
-    c.name.toLowerCase().includes(searchClient.toLowerCase()) ||
-    c.phone.includes(searchClient)
+  const filteredClients = clients.filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchClient.toLowerCase()) ||
+      c.phone.includes(searchClient),
   );
 
   return (
@@ -82,8 +85,13 @@ export default function Catalogos({
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#121212]/50 backdrop-blur-md p-5 rounded-2xl border border-[#2a2a2a]">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight font-sans">Catálogos</h1>
-          <p className="text-xs text-gray-400 font-medium mt-0.5">Gestión de especialistas, portafolio de servicios y directorio de clientes</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight font-sans">
+            Catálogos
+          </h1>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">
+            Gestión de especialistas, portafolio de servicios y directorio de
+            clientes
+          </p>
         </div>
       </div>
 
@@ -93,7 +101,9 @@ export default function Catalogos({
         <div className="bg-[#141414] rounded-2xl border border-[#2a2a2a] p-5 shadow-sm space-y-4">
           <div className="flex items-center space-x-2 text-white">
             <User className="w-5 h-5 text-blue-400" />
-            <h3 className="text-sm font-bold uppercase tracking-wide">Profesionales</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wide">
+              Profesionales
+            </h3>
           </div>
 
           <form onSubmit={submitProfessional} className="flex gap-2">
@@ -116,14 +126,24 @@ export default function Catalogos({
 
           <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
             {professionals.map((prof) => (
-              <div key={prof.id} className="p-3 bg-[#1a1a1a]/55 hover:bg-[#1a1a1a] rounded-xl border border-[#2a2a2a]/60 flex items-center justify-between transition-all group">
+              <div
+                key={prof.id}
+                className="p-3 bg-[#1a1a1a]/55 hover:bg-[#1a1a1a] rounded-xl border border-[#2a2a2a]/60 flex items-center justify-between transition-all group"
+              >
                 <div className="flex items-center space-x-2.5">
-                  <div className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: prof.color || '#3b82f6' }} />
-                  <span className="text-xs font-bold text-gray-200">{prof.name}</span>
+                  <div
+                    className="w-2.5 h-2.5 rounded-full animate-pulse"
+                    style={{ backgroundColor: prof.color || "#3b82f6" }}
+                  />
+                  <span className="text-xs font-bold text-gray-200">
+                    {prof.name}
+                  </span>
                 </div>
                 <button
                   onClick={() => {
-                    const confirmDel = window.confirm(`¿Seguro que deseas eliminar al profesional "${prof.name}"?`);
+                    const confirmDel = window.confirm(
+                      `¿Seguro que deseas eliminar al profesional "${prof.name}"?`,
+                    );
                     if (confirmDel) onDeleteProfessional(prof.id);
                   }}
                   className="p-1.5 text-gray-400 hover:text-rose-400 hover:bg-rose-950/20 rounded-lg transition-all cursor-pointer"
@@ -139,12 +159,19 @@ export default function Catalogos({
         <div className="bg-[#141414] rounded-2xl border border-[#2a2a2a] p-5 shadow-sm space-y-4">
           <div className="flex items-center space-x-2 text-white">
             <Briefcase className="w-5 h-5 text-indigo-400" />
-            <h3 className="text-sm font-bold uppercase tracking-wide">Servicios</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wide">
+              Servicios
+            </h3>
           </div>
 
-          <form onSubmit={submitService} className="space-y-3 p-3 bg-[#121212] rounded-xl border border-[#2a2a2a]">
+          <form
+            onSubmit={submitService}
+            className="space-y-3 p-3 bg-[#121212] rounded-xl border border-[#2a2a2a]"
+          >
             <div>
-              <label className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Nombre del Servicio</label>
+              <label className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">
+                Nombre del Servicio
+              </label>
               <input
                 type="text"
                 placeholder="Ej. Corte clásico"
@@ -156,7 +183,9 @@ export default function Catalogos({
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Duración (min)</label>
+                <label className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">
+                  Duración (min)
+                </label>
                 <input
                   type="number"
                   placeholder="Minutos"
@@ -167,7 +196,9 @@ export default function Catalogos({
                 />
               </div>
               <div>
-                <label className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Precio ($)</label>
+                <label className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">
+                  Precio ($)
+                </label>
                 <input
                   type="text"
                   placeholder="Monto"
@@ -189,14 +220,23 @@ export default function Catalogos({
 
           <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
             {services.map((srv) => (
-              <div key={srv.id} className="p-3 bg-[#1a1a1a]/55 hover:bg-[#1a1a1a] rounded-xl border border-[#2a2a2a]/60 flex items-center justify-between transition-all">
+              <div
+                key={srv.id}
+                className="p-3 bg-[#1a1a1a]/55 hover:bg-[#1a1a1a] rounded-xl border border-[#2a2a2a]/60 flex items-center justify-between transition-all"
+              >
                 <div>
-                  <h4 className="text-xs font-bold text-gray-200">{srv.name}</h4>
-                  <p className="text-[10px] text-gray-400 font-semibold mt-0.5">{srv.duration} min • ${srv.price.toFixed(2)}</p>
+                  <h4 className="text-xs font-bold text-gray-200">
+                    {srv.name}
+                  </h4>
+                  <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                    {srv.duration} min • ${srv.price.toFixed(2)}
+                  </p>
                 </div>
                 <button
                   onClick={() => {
-                    const confirmDel = window.confirm(`¿Seguro que deseas eliminar el servicio "${srv.name}"?`);
+                    const confirmDel = window.confirm(
+                      `¿Seguro que deseas eliminar el servicio "${srv.name}"?`,
+                    );
                     if (confirmDel) onDeleteService(srv.id);
                   }}
                   className="p-1.5 text-gray-400 hover:text-rose-400 hover:bg-rose-950/20 rounded-lg transition-all cursor-pointer"
@@ -213,7 +253,9 @@ export default function Catalogos({
           <div className="flex items-center justify-between text-white">
             <div className="flex items-center space-x-2">
               <Smile className="w-5 h-5 text-emerald-400" />
-              <h3 className="text-sm font-bold uppercase tracking-wide">Clientes</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wide">
+                Clientes
+              </h3>
             </div>
             <div className="flex items-center bg-[#1a1a1a] border border-[#2a2a2a] px-2 py-1 rounded-lg">
               <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5" />
@@ -227,7 +269,10 @@ export default function Catalogos({
             </div>
           </div>
 
-          <form onSubmit={submitClient} className="space-y-2.5 p-3 bg-[#121212] rounded-xl border border-[#2a2a2a]">
+          <form
+            onSubmit={submitClient}
+            className="space-y-2.5 p-3 bg-[#121212] rounded-xl border border-[#2a2a2a]"
+          >
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="text"
@@ -265,15 +310,26 @@ export default function Catalogos({
 
           <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
             {filteredClients.map((cli) => (
-              <div key={cli.id} className="p-3 bg-[#1a1a1a]/55 hover:bg-[#1a1a1a] rounded-xl border border-[#2a2a2a]/60 flex items-center justify-between transition-all">
+              <div
+                key={cli.id}
+                className="p-3 bg-[#1a1a1a]/55 hover:bg-[#1a1a1a] rounded-xl border border-[#2a2a2a]/60 flex items-center justify-between transition-all"
+              >
                 <div>
-                  <h4 className="text-xs font-bold text-gray-200">{cli.name}</h4>
-                  <p className="text-[10px] text-gray-400 font-medium mt-0.5">{cli.phone}</p>
-                  <p className="text-[9px] text-gray-500 font-semibold">{cli.email}</p>
+                  <h4 className="text-xs font-bold text-gray-200">
+                    {cli.name}
+                  </h4>
+                  <p className="text-[10px] text-gray-400 font-medium mt-0.5">
+                    {cli.phone}
+                  </p>
+                  <p className="text-[9px] text-gray-500 font-semibold">
+                    {cli.email}
+                  </p>
                 </div>
                 <button
                   onClick={() => {
-                    const confirmDel = window.confirm(`¿Seguro que deseas eliminar al cliente "${cli.name}"?`);
+                    const confirmDel = window.confirm(
+                      `¿Seguro que deseas eliminar al cliente "${cli.name}"?`,
+                    );
                     if (confirmDel) onDeleteClient(cli.id);
                   }}
                   className="p-1.5 text-gray-400 hover:text-rose-400 hover:bg-rose-950/20 rounded-lg transition-all cursor-pointer"
@@ -283,7 +339,9 @@ export default function Catalogos({
               </div>
             ))}
             {filteredClients.length === 0 && (
-              <p className="text-center text-xs text-gray-500 py-6">No se encontraron clientes</p>
+              <p className="text-center text-xs text-gray-500 py-6">
+                No se encontraron clientes
+              </p>
             )}
           </div>
         </div>

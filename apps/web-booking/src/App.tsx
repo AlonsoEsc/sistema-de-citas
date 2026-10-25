@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -10,10 +16,15 @@ import {
   Check,
   CheckCircle,
   LogOut,
-  Smartphone
+  Smartphone,
 } from "lucide-react";
 import { bookingApi, tenantSlug } from "./lib/api";
-import type { AvailabilityResponse, CustomerAppointment, Service, Staff } from "./lib/types";
+import type {
+  AvailabilityResponse,
+  CustomerAppointment,
+  Service,
+  Staff,
+} from "./lib/types";
 import { PRODUCT_NAME } from "./config/brand";
 
 type BookingView = "auth" | "menu" | "book" | "cancel";
@@ -48,16 +59,29 @@ declare global {
     google?: {
       accounts: {
         id: {
-          initialize: (config: { client_id: string; callback: (response: { credential: string }) => void }) => void;
-          renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
+          initialize: (config: {
+            client_id: string;
+            callback: (response: { credential: string }) => void;
+          }) => void;
+          renderButton: (
+            parent: HTMLElement,
+            options: Record<string, unknown>,
+          ) => void;
         };
       };
     };
     FB?: {
-      init: (config: { appId: string; cookie: boolean; xfbml: boolean; version: string }) => void;
+      init: (config: {
+        appId: string;
+        cookie: boolean;
+        xfbml: boolean;
+        version: string;
+      }) => void;
       login: (
-        callback: (response: { authResponse?: { accessToken: string } }) => void,
-        options: { scope: string }
+        callback: (response: {
+          authResponse?: { accessToken: string };
+        }) => void,
+        options: { scope: string },
       ) => void;
     };
     fbAsyncInit?: () => void;
@@ -72,21 +96,21 @@ function formatDateLabel(value: string) {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
   });
 }
 
 function formatCurrency(priceCents: number) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
-    currency: "MXN"
+    currency: "MXN",
   }).format(priceCents / 100);
 }
 
 function Notice({
   tone,
   children,
-  onClose
+  onClose,
 }: {
   tone: "success" | "error" | "info" | "warning";
   children: ReactNode;
@@ -96,19 +120,25 @@ function Notice({
     success: "border-emerald-800/40 bg-emerald-950/40 text-emerald-300",
     error: "border-rose-800/40 bg-rose-950/35 text-rose-300",
     info: "border-blue-800/40 bg-blue-950/30 text-blue-300",
-    warning: "border-amber-800/40 bg-amber-950/25 text-amber-300"
+    warning: "border-amber-800/40 bg-amber-950/25 text-amber-300",
   }[tone];
 
-  const Icon = tone === "success" ? CheckCircle : tone === "warning" ? AlertCircle : Check;
+  const Icon =
+    tone === "success" ? CheckCircle : tone === "warning" ? AlertCircle : Check;
 
   return (
-    <div className={`flex items-center justify-between gap-3 rounded-xl border p-3 text-xs font-bold ${styles}`}>
+    <div
+      className={`flex items-center justify-between gap-3 rounded-xl border p-3 text-xs font-bold ${styles}`}
+    >
       <div className="flex items-center gap-2">
         <Icon className="h-4 w-4 shrink-0" />
         <span>{children}</span>
       </div>
       {onClose && (
-        <button onClick={onClose} className="text-[10px] font-extrabold uppercase tracking-wider hover:underline">
+        <button
+          onClick={onClose}
+          className="text-[10px] font-extrabold uppercase tracking-wider hover:underline"
+        >
           Aceptar
         </button>
       )}
@@ -118,12 +148,18 @@ function Notice({
 
 function BookingContent() {
   const queryClient = useQueryClient();
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-  const facebookAppId = import.meta.env.VITE_FACEBOOK_APP_ID as string | undefined;
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as
+    | string
+    | undefined;
+  const facebookAppId = import.meta.env.VITE_FACEBOOK_APP_ID as
+    | string
+    | undefined;
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
 
   const [view, setView] = useState<BookingView>("auth");
-  const [bookingSession, setBookingSession] = useState<BookingSession | null>(null);
+  const [bookingSession, setBookingSession] = useState<BookingSession | null>(
+    null,
+  );
   const [serviceId, setServiceId] = useState("");
   const [staffId, setStaffId] = useState("");
   const [date, setDate] = useState(dayjs().format("YYYY-MM-DD"));
@@ -157,41 +193,51 @@ function BookingContent() {
 
   // Si el token del cliente vence o es rechazado, vuelve a pedir verificacion del telefono.
   useEffect(() => {
-    const interceptorId = bookingApi.interceptors.response.use(undefined, (err) => {
-      const url = String(err?.config?.url ?? "");
-      if (err?.response?.status === 401 && !url.includes("/auth/")) {
-        localStorage.removeItem(SESSION_KEY);
-        setBookingSession(null);
-        setView("auth");
-        setSuccess(null);
-        setError("Tu sesion vencio. Verifica tu telefono de nuevo.");
-      }
-      return Promise.reject(err);
-    });
+    const interceptorId = bookingApi.interceptors.response.use(
+      undefined,
+      (err) => {
+        const url = String(err?.config?.url ?? "");
+        if (err?.response?.status === 401 && !url.includes("/auth/")) {
+          localStorage.removeItem(SESSION_KEY);
+          setBookingSession(null);
+          setView("auth");
+          setSuccess(null);
+          setError("Tu sesion vencio. Verifica tu telefono de nuevo.");
+        }
+        return Promise.reject(err);
+      },
+    );
     return () => bookingApi.interceptors.response.eject(interceptorId);
   }, []);
 
   const servicesQuery = useQuery({
     queryKey: ["public-services", tenantSlug],
     enabled: Boolean(bookingSession && view === "book"),
-    queryFn: async () => (await bookingApi.get<Service[]>(`/public/${tenantSlug}/services`)).data
+    queryFn: async () =>
+      (await bookingApi.get<Service[]>(`/public/${tenantSlug}/services`)).data,
   });
 
   const staffQuery = useQuery({
     queryKey: ["public-staff", tenantSlug],
     enabled: Boolean(bookingSession && view === "book"),
-    queryFn: async () => (await bookingApi.get<Staff[]>(`/public/${tenantSlug}/staff`)).data
+    queryFn: async () =>
+      (await bookingApi.get<Staff[]>(`/public/${tenantSlug}/staff`)).data,
   });
 
   const availabilityQuery = useQuery({
     queryKey: ["availability", tenantSlug, staffId, serviceId, date],
-    enabled: Boolean(bookingSession && view === "book" && staffId && serviceId && date),
+    enabled: Boolean(
+      bookingSession && view === "book" && staffId && serviceId && date,
+    ),
     queryFn: async () =>
       (
-        await bookingApi.get<AvailabilityResponse>(`/public/${tenantSlug}/availability`, {
-          params: { date, staffId, serviceIds: serviceId }
-        })
-      ).data
+        await bookingApi.get<AvailabilityResponse>(
+          `/public/${tenantSlug}/availability`,
+          {
+            params: { date, staffId, serviceIds: serviceId },
+          },
+        )
+      ).data,
   });
 
   const myAppointmentsQuery = useQuery({
@@ -199,14 +245,22 @@ function BookingContent() {
     enabled: Boolean(bookingSession && view === "cancel"),
     queryFn: async () =>
       (
-        await bookingApi.get<CustomerAppointment[]>(`/public/${tenantSlug}/my-appointments`, {
-          headers: { Authorization: `Bearer ${bookingSession?.token}` }
-        })
-      ).data
+        await bookingApi.get<CustomerAppointment[]>(
+          `/public/${tenantSlug}/my-appointments`,
+          {
+            headers: { Authorization: `Bearer ${bookingSession?.token}` },
+          },
+        )
+      ).data,
   });
 
-  const slots = useMemo(() => availabilityQuery.data?.data[0]?.slots ?? [], [availabilityQuery.data]);
-  const selectedService = servicesQuery.data?.find((service) => service.id === serviceId);
+  const slots = useMemo(
+    () => availabilityQuery.data?.data[0]?.slots ?? [],
+    [availabilityQuery.data],
+  );
+  const selectedService = servicesQuery.data?.find(
+    (service) => service.id === serviceId,
+  );
   const selectedStaff = staffQuery.data?.find((staff) => staff.id === staffId);
 
   const startAuthMutation = useMutation({
@@ -217,35 +271,52 @@ function BookingContent() {
       email?: string;
       googleIdToken?: string;
       facebookAccessToken?: string;
-    }) => (await bookingApi.post<StartAuthResponse>(`/public/${tenantSlug}/auth/start`, payload)).data,
+    }) =>
+      (
+        await bookingApi.post<StartAuthResponse>(
+          `/public/${tenantSlug}/auth/start`,
+          payload,
+        )
+      ).data,
     onSuccess: (response) => {
       setAuthSessionId(response.sessionId);
       setOtpChannel(response.channel);
       setOtpDebugCode(response.devOtpCode ?? null);
-      setAuthInfo(`Codigo enviado a ${response.phoneMasked} por ${response.channel}.`);
+      setAuthInfo(
+        `Codigo enviado a ${response.phoneMasked} por ${response.channel}.`,
+      );
       setError(null);
     },
     onError: (err: unknown) => {
-      const response = (err as { response?: { status?: number; data?: { message?: string } } }).response;
+      const response = (
+        err as { response?: { status?: number; data?: { message?: string } } }
+      ).response;
       setAuthInfo(null);
       setError(
         response?.status === 429
-          ? (response.data?.message ?? "Demasiados intentos. Espera unos minutos.")
-          : "No se pudo enviar el codigo. Revisa telefono y configuracion social."
+          ? (response.data?.message ??
+              "Demasiados intentos. Espera unos minutos.")
+          : "No se pudo enviar el codigo. Revisa telefono y configuracion social.",
       );
-    }
+    },
   });
 
   const verifyAuthMutation = useMutation({
     mutationFn: async () =>
       (
-        await bookingApi.post<VerifyAuthResponse>(`/public/${tenantSlug}/auth/verify`, {
-          sessionId: authSessionId,
-          code: otpCode
-        })
+        await bookingApi.post<VerifyAuthResponse>(
+          `/public/${tenantSlug}/auth/verify`,
+          {
+            sessionId: authSessionId,
+            code: otpCode,
+          },
+        )
       ).data,
     onSuccess: (response) => {
-      const session: BookingSession = { token: response.token, customer: response.customer };
+      const session: BookingSession = {
+        token: response.token,
+        customer: response.customer,
+      };
       setBookingSession(session);
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
       setView("menu");
@@ -254,9 +325,14 @@ function BookingContent() {
       setAuthInfo("Telefono verificado correctamente.");
     },
     onError: (err: unknown) => {
-      const status = (err as { response?: { status?: number } }).response?.status;
-      setError(status === 429 ? "Demasiados intentos. Espera unos minutos." : "Codigo invalido o expirado.");
-    }
+      const status = (err as { response?: { status?: number } }).response
+        ?.status;
+      setError(
+        status === 429
+          ? "Demasiados intentos. Espera unos minutos."
+          : "Codigo invalido o expirado.",
+      );
+    },
   });
 
   const bookMutation = useMutation({
@@ -267,7 +343,7 @@ function BookingContent() {
       await bookingApi.post(
         `/public/${tenantSlug}/book`,
         { staffId, serviceIds: [serviceId], startAt: slot },
-        { headers: { Authorization: `Bearer ${bookingSession.token}` } }
+        { headers: { Authorization: `Bearer ${bookingSession.token}` } },
       );
     },
     onSuccess: async () => {
@@ -275,7 +351,9 @@ function BookingContent() {
       setSuccess("Cita confirmada correctamente.");
       setSlot("");
       setView("menu");
-      await queryClient.invalidateQueries({ queryKey: ["my-appointments", tenantSlug] });
+      await queryClient.invalidateQueries({
+        queryKey: ["my-appointments", tenantSlug],
+      });
     },
     onError: (err: unknown) => {
       const defaultMessage = "No se pudo reservar.";
@@ -283,12 +361,14 @@ function BookingContent() {
         typeof err === "object" &&
         err !== null &&
         "response" in err &&
-        typeof (err as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        typeof (err as { response?: { data?: { message?: string } } }).response
+          ?.data?.message === "string"
+          ? (err as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
           : defaultMessage;
       setSuccess(null);
       setError(message ?? defaultMessage);
-    }
+    },
   });
 
   const cancelMutation = useMutation({
@@ -299,18 +379,20 @@ function BookingContent() {
       return bookingApi.post(
         `/public/${tenantSlug}/cancel`,
         { appointmentId },
-        { headers: { Authorization: `Bearer ${bookingSession.token}` } }
+        { headers: { Authorization: `Bearer ${bookingSession.token}` } },
       );
     },
     onSuccess: async () => {
       setError(null);
       setSuccess("Cita cancelada correctamente.");
-      await queryClient.invalidateQueries({ queryKey: ["my-appointments", tenantSlug] });
+      await queryClient.invalidateQueries({
+        queryKey: ["my-appointments", tenantSlug],
+      });
     },
     onError: () => {
       setSuccess(null);
       setError("No se pudo cancelar la cita.");
-    }
+    },
   });
 
   useEffect(() => {
@@ -338,15 +420,19 @@ function BookingContent() {
             setError("Para Google login, primero escribe tu telefono.");
             return;
           }
-          startAuthMutation.mutate({ provider: "google", phone, googleIdToken: credential });
-        }
+          startAuthMutation.mutate({
+            provider: "google",
+            phone,
+            googleIdToken: credential,
+          });
+        },
       });
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         theme: "outline",
         size: "large",
         text: "continue_with",
         shape: "pill",
-        width: 280
+        width: 280,
       });
       window.clearInterval(timer);
     }, 300);
@@ -367,7 +453,12 @@ function BookingContent() {
       document.head.appendChild(script);
     }
     window.fbAsyncInit = () => {
-      window.FB?.init({ appId: facebookAppId, cookie: true, xfbml: false, version: "v23.0" });
+      window.FB?.init({
+        appId: facebookAppId,
+        cookie: true,
+        xfbml: false,
+        version: "v23.0",
+      });
     };
   }, [facebookAppId, view]);
 
@@ -401,7 +492,12 @@ function BookingContent() {
 
   function manualStartAuth(event: FormEvent) {
     event.preventDefault();
-    startAuthMutation.mutate({ provider: "manual", fullName, email: email || undefined, phone });
+    startAuthMutation.mutate({
+      provider: "manual",
+      fullName,
+      email: email || undefined,
+      phone,
+    });
   }
 
   function startFacebookAuth() {
@@ -420,9 +516,13 @@ function BookingContent() {
           setError("No se pudo autenticar con Facebook.");
           return;
         }
-        startAuthMutation.mutate({ provider: "facebook", phone, facebookAccessToken: accessToken });
+        startAuthMutation.mutate({
+          provider: "facebook",
+          phone,
+          facebookAccessToken: accessToken,
+        });
       },
-      { scope: "public_profile,email" }
+      { scope: "public_profile,email" },
     );
   }
 
@@ -435,27 +535,40 @@ function BookingContent() {
               <Calendar className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">{PRODUCT_NAME}</h1>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Portal de Reservas</p>
+              <h1 className="text-xl font-bold tracking-tight text-white">
+                {PRODUCT_NAME}
+              </h1>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                Portal de Reservas
+              </p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2 rounded-xl border border-blue-800/30 bg-blue-950/20 p-3 text-blue-400">
           <Smartphone className="h-5 w-5 animate-pulse" />
-          <span className="text-xs font-bold uppercase tracking-wider">Portal de Reservas de Clientes</span>
+          <span className="text-xs font-bold uppercase tracking-wider">
+            Portal de Reservas de Clientes
+          </span>
         </div>
 
         <div className="flex min-h-[560px] flex-col overflow-hidden rounded-3xl border border-[#2a2a2a] bg-[#141414] shadow-2xl">
           <div className="border-b border-[#2a2a2a] bg-[#121212] p-6">
             <div className="space-y-1">
-              <h2 className="text-xl font-bold tracking-tight text-white">Reserva en 2 minutos</h2>
-              <p className="text-xs font-medium text-gray-400">Acceso sin password con verificacion por telefono.</p>
+              <h2 className="text-xl font-bold tracking-tight text-white">
+                Reserva en 2 minutos
+              </h2>
+              <p className="text-xs font-medium text-gray-400">
+                Acceso sin password con verificacion por telefono.
+              </p>
             </div>
             {bookingSession && (
               <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#2a2a2a] pt-3 text-xs">
                 <span className="font-medium text-gray-300">
-                  Sesion activa: <strong className="text-white">{bookingSession.customer.fullName}</strong>{" "}
+                  Sesion activa:{" "}
+                  <strong className="text-white">
+                    {bookingSession.customer.fullName}
+                  </strong>{" "}
                   ({bookingSession.customer.phone})
                 </span>
                 <button
@@ -470,10 +583,20 @@ function BookingContent() {
           </div>
 
           <div className="flex flex-1 flex-col gap-3 p-6">
-            {error && <Notice tone="error" onClose={() => setError(null)}>{error}</Notice>}
-            {success && <Notice tone="success" onClose={() => setSuccess(null)}>{success}</Notice>}
+            {error && (
+              <Notice tone="error" onClose={() => setError(null)}>
+                {error}
+              </Notice>
+            )}
+            {success && (
+              <Notice tone="success" onClose={() => setSuccess(null)}>
+                {success}
+              </Notice>
+            )}
             {authInfo && <Notice tone="info">{authInfo}</Notice>}
-            {otpDebugCode && view === "auth" && <Notice tone="warning">Modo dev OTP: {otpDebugCode}</Notice>}
+            {otpDebugCode && view === "auth" && (
+              <Notice tone="warning">Modo dev OTP: {otpDebugCode}</Notice>
+            )}
 
             <AnimatePresence mode="wait">
               {view === "auth" && (
@@ -486,7 +609,9 @@ function BookingContent() {
                   className="my-auto space-y-4"
                 >
                   <div className="space-y-3">
-                    <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-white">Inicia sesion</h3>
+                    <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-white">
+                      Inicia sesion
+                    </h3>
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500">
                         Telefono (obligatorio)
@@ -526,10 +651,14 @@ function BookingContent() {
 
                   <button
                     type="submit"
-                    disabled={!phone || !fullName || startAuthMutation.isPending}
+                    disabled={
+                      !phone || !fullName || startAuthMutation.isPending
+                    }
                     className="w-full rounded-xl border border-blue-500/20 bg-blue-600 py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-[#2a2a2a]/60 disabled:bg-[#1a1a1a] disabled:text-gray-600"
                   >
-                    {startAuthMutation.isPending ? "Enviando..." : "Enviar Codigo"}
+                    {startAuthMutation.isPending
+                      ? "Enviando..."
+                      : "Enviar Codigo"}
                   </button>
 
                   <div className="space-y-2 rounded-xl border border-[#2a2a2a] bg-[#121212] p-3">
@@ -547,8 +676,16 @@ function BookingContent() {
                         Continuar con Facebook
                       </button>
                     </div>
-                    {!googleClientId && <p className="text-[10px] font-semibold text-gray-500">Google no configurado.</p>}
-                    {!facebookAppId && <p className="text-[10px] font-semibold text-gray-500">Facebook no configurado.</p>}
+                    {!googleClientId && (
+                      <p className="text-[10px] font-semibold text-gray-500">
+                        Google no configurado.
+                      </p>
+                    )}
+                    {!facebookAppId && (
+                      <p className="text-[10px] font-semibold text-gray-500">
+                        Facebook no configurado.
+                      </p>
+                    )}
                   </div>
 
                   {authSessionId && (
@@ -557,7 +694,8 @@ function BookingContent() {
                         Verifica OTP
                       </label>
                       <p className="text-xs font-semibold text-gray-400">
-                        Ingresa el codigo recibido por {otpChannel ?? "telefono"}.
+                        Ingresa el codigo recibido por{" "}
+                        {otpChannel ?? "telefono"}.
                       </p>
                       <input
                         type="text"
@@ -568,7 +706,10 @@ function BookingContent() {
                           // Enter verifica el codigo; sin esto enviaria el formulario y pediria otro OTP.
                           if (event.key === "Enter") {
                             event.preventDefault();
-                            if (otpCode.length === 6 && !verifyAuthMutation.isPending) {
+                            if (
+                              otpCode.length === 6 &&
+                              !verifyAuthMutation.isPending
+                            ) {
                               verifyAuthMutation.mutate();
                             }
                           }
@@ -581,7 +722,9 @@ function BookingContent() {
                       <button
                         type="button"
                         onClick={() => verifyAuthMutation.mutate()}
-                        disabled={otpCode.length !== 6 || verifyAuthMutation.isPending}
+                        disabled={
+                          otpCode.length !== 6 || verifyAuthMutation.isPending
+                        }
                         className="w-full rounded-xl border border-blue-500/20 bg-blue-600 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-[#2a2a2a]/60 disabled:bg-[#1a1a1a] disabled:text-gray-600"
                       >
                         Verificar Telefono
@@ -603,12 +746,16 @@ function BookingContent() {
                     <span className="block text-[10px] font-bold uppercase tracking-widest text-blue-400">
                       Acceso Correcto
                     </span>
-                    <h3 className="mt-1 text-lg font-bold tracking-tight text-white">Que quieres hacer?</h3>
+                    <h3 className="mt-1 text-lg font-bold tracking-tight text-white">
+                      Que quieres hacer?
+                    </h3>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="flex flex-col justify-between rounded-2xl border border-[#2a2a2a] bg-[#1a1a1a] p-5 transition-all hover:bg-[#222]">
                       <div className="space-y-2">
-                        <h4 className="text-sm font-bold tracking-tight text-white">Hacer cita</h4>
+                        <h4 className="text-sm font-bold tracking-tight text-white">
+                          Hacer cita
+                        </h4>
                         <p className="text-xs font-medium leading-relaxed text-gray-400">
                           Elegir servicio, profesional y horario disponible.
                         </p>
@@ -622,7 +769,9 @@ function BookingContent() {
                     </div>
                     <div className="flex flex-col justify-between rounded-2xl border border-[#2a2a2a] bg-[#1a1a1a] p-5 transition-all hover:bg-[#222]">
                       <div className="space-y-2">
-                        <h4 className="text-sm font-bold tracking-tight text-white">Cancelar cita</h4>
+                        <h4 className="text-sm font-bold tracking-tight text-white">
+                          Cancelar cita
+                        </h4>
                         <p className="text-xs font-medium leading-relaxed text-gray-400">
                           Ver tus citas activas y cancelar la que necesites.
                         </p>
@@ -650,7 +799,9 @@ function BookingContent() {
                   className="w-full space-y-5"
                 >
                   <div className="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-white">Nueva Cita</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-white">
+                      Nueva Cita
+                    </h3>
                     <button
                       onClick={() => setView("menu")}
                       className="flex items-center gap-1 text-xs font-semibold text-gray-400 hover:text-white"
@@ -661,7 +812,9 @@ function BookingContent() {
                   </div>
 
                   <div className="space-y-2">
-                    <span className="block text-xs font-bold tracking-tight text-white">1) Elige un servicio</span>
+                    <span className="block text-xs font-bold tracking-tight text-white">
+                      1) Elige un servicio
+                    </span>
                     <div className="flex flex-wrap gap-2">
                       {servicesQuery.data?.map((service) => (
                         <button
@@ -677,7 +830,11 @@ function BookingContent() {
                           {service.name} - {service.durationMinutes} min
                         </button>
                       ))}
-                      {servicesQuery.isLoading && <p className="text-xs font-semibold text-gray-500">Cargando servicios...</p>}
+                      {servicesQuery.isLoading && (
+                        <p className="text-xs font-semibold text-gray-500">
+                          Cargando servicios...
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -687,22 +844,32 @@ function BookingContent() {
                     </span>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-[9px] font-bold uppercase text-gray-500">Especialista</label>
+                        <label className="mb-1 block text-[9px] font-bold uppercase text-gray-500">
+                          Especialista
+                        </label>
                         <select
                           value={staffId}
                           onChange={(event) => setStaffId(event.target.value)}
                           className="w-full rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-3 text-xs font-semibold text-gray-200 outline-none focus:border-blue-500"
                         >
-                          <option value="" className="bg-[#141414]">Selecciona</option>
+                          <option value="" className="bg-[#141414]">
+                            Selecciona
+                          </option>
                           {staffQuery.data?.map((staff) => (
-                            <option key={staff.id} value={staff.id} className="bg-[#141414]">
+                            <option
+                              key={staff.id}
+                              value={staff.id}
+                              className="bg-[#141414]"
+                            >
                               {staff.displayName}
                             </option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="mb-1 block text-[9px] font-bold uppercase text-gray-500">Fecha</label>
+                        <label className="mb-1 block text-[9px] font-bold uppercase text-gray-500">
+                          Fecha
+                        </label>
                         <input
                           type="date"
                           value={date}
@@ -714,8 +881,14 @@ function BookingContent() {
                   </div>
 
                   <div className="space-y-2">
-                    <span className="block text-xs font-bold tracking-tight text-white">3) Horarios disponibles</span>
-                    {availabilityQuery.isLoading && <p className="text-xs font-semibold text-gray-500">Buscando horarios...</p>}
+                    <span className="block text-xs font-bold tracking-tight text-white">
+                      3) Horarios disponibles
+                    </span>
+                    {availabilityQuery.isLoading && (
+                      <p className="text-xs font-semibold text-gray-500">
+                        Buscando horarios...
+                      </p>
+                    )}
                     {slots.length > 0 ? (
                       <div className="grid max-h-[160px] grid-cols-4 gap-1.5 overflow-y-auto rounded-xl border border-[#2a2a2a] bg-[#121212] p-2 sm:grid-cols-6">
                         {slots.map((item) => (
@@ -735,25 +908,38 @@ function BookingContent() {
                       </div>
                     ) : (
                       <p className="py-4 text-center text-xs font-semibold text-gray-500">
-                        {serviceId && staffId ? "No hay horarios para esta combinacion." : "Elige servicio y profesional."}
+                        {serviceId && staffId
+                          ? "No hay horarios para esta combinacion."
+                          : "Elige servicio y profesional."}
                       </p>
                     )}
                   </div>
 
                   {(selectedService || selectedStaff) && (
                     <div className="rounded-xl border border-[#2a2a2a] bg-[#121212] p-3 text-xs font-semibold text-gray-400">
-                      {selectedService && <span>{selectedService.name} · {formatCurrency(selectedService.priceCents)}</span>}
+                      {selectedService && (
+                        <span>
+                          {selectedService.name} ·{" "}
+                          {formatCurrency(selectedService.priceCents)}
+                        </span>
+                      )}
                       {selectedService && selectedStaff && <span> · </span>}
-                      {selectedStaff && <span>{selectedStaff.displayName}</span>}
+                      {selectedStaff && (
+                        <span>{selectedStaff.displayName}</span>
+                      )}
                     </div>
                   )}
 
                   <button
                     onClick={() => bookMutation.mutate()}
-                    disabled={!serviceId || !staffId || !slot || bookMutation.isPending}
+                    disabled={
+                      !serviceId || !staffId || !slot || bookMutation.isPending
+                    }
                     className="w-full rounded-xl border border-blue-500/20 bg-blue-600 py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-[#2a2a2a]/60 disabled:bg-[#1a1a1a] disabled:text-gray-600"
                   >
-                    {bookMutation.isPending ? "Reservando..." : "Confirmar Cita"}
+                    {bookMutation.isPending
+                      ? "Reservando..."
+                      : "Confirmar Cita"}
                   </button>
                 </motion.div>
               )}
@@ -767,7 +953,9 @@ function BookingContent() {
                   className="w-full space-y-5"
                 >
                   <div className="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-white">Tus Citas Activas</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-white">
+                      Tus Citas Activas
+                    </h3>
                     <button
                       onClick={() => setView("menu")}
                       className="flex items-center gap-1 text-xs font-semibold text-gray-400 hover:text-white"
@@ -778,7 +966,9 @@ function BookingContent() {
                   </div>
 
                   {myAppointmentsQuery.isLoading && (
-                    <p className="py-6 text-center text-xs font-semibold text-gray-500">Cargando tus citas activas...</p>
+                    <p className="py-6 text-center text-xs font-semibold text-gray-500">
+                      Cargando tus citas activas...
+                    </p>
                   )}
 
                   <div className="max-h-[340px] space-y-3 overflow-y-auto pr-1">
@@ -789,9 +979,13 @@ function BookingContent() {
                       >
                         <div>
                           <h4 className="text-xs font-bold text-white">
-                            {appointment.services.map((item) => item.service.name).join(", ")}
+                            {appointment.services
+                              .map((item) => item.service.name)
+                              .join(", ")}
                           </h4>
-                          <p className="mt-0.5 text-[10px] font-bold text-gray-400">{formatDateLabel(appointment.startAt)}</p>
+                          <p className="mt-0.5 text-[10px] font-bold text-gray-400">
+                            {formatDateLabel(appointment.startAt)}
+                          </p>
                           <p className="text-[10px] font-medium text-gray-500">
                             Especialista: {appointment.staff.displayName}
                           </p>
@@ -807,12 +1001,15 @@ function BookingContent() {
                     ))}
                   </div>
 
-                  {!myAppointmentsQuery.isLoading && !myAppointmentsQuery.data?.length && (
-                    <div className="space-y-1 py-12 text-center font-medium text-gray-500">
-                      <p>No tienes citas activas para cancelar.</p>
-                      <p className="text-[10px]">Agenda un servicio desde el menu de opciones.</p>
-                    </div>
-                  )}
+                  {!myAppointmentsQuery.isLoading &&
+                    !myAppointmentsQuery.data?.length && (
+                      <div className="space-y-1 py-12 text-center font-medium text-gray-500">
+                        <p>No tienes citas activas para cancelar.</p>
+                        <p className="text-[10px]">
+                          Agenda un servicio desde el menu de opciones.
+                        </p>
+                      </div>
+                    )}
                 </motion.div>
               )}
             </AnimatePresence>

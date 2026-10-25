@@ -14,7 +14,10 @@ function getKey() {
 export function encryptSecret(value: string) {
   const iv = randomBytes(12);
   const cipher = createCipheriv(ALGORITHM, getKey(), iv);
-  const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+  const encrypted = Buffer.concat([
+    cipher.update(value, "utf8"),
+    cipher.final(),
+  ]);
   const tag = cipher.getAuthTag();
   return `${iv.toString("base64")}.${tag.toString("base64")}.${encrypted.toString("base64")}`;
 }
@@ -25,11 +28,15 @@ export function decryptSecret(value: string) {
     throw new Error("Formato de secreto cifrado invalido");
   }
 
-  const decipher = createDecipheriv(ALGORITHM, getKey(), Buffer.from(ivRaw, "base64"));
+  const decipher = createDecipheriv(
+    ALGORITHM,
+    getKey(),
+    Buffer.from(ivRaw, "base64"),
+  );
   decipher.setAuthTag(Buffer.from(tagRaw, "base64"));
   const decrypted = Buffer.concat([
     decipher.update(Buffer.from(encryptedRaw, "base64")),
-    decipher.final()
+    decipher.final(),
   ]);
   return decrypted.toString("utf8");
 }

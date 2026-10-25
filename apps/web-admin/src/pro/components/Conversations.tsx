@@ -74,7 +74,10 @@ function formatTime(value: string | null) {
   const date = new Date(value);
   const now = new Date();
   if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString("es-SV", { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString("es-SV", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
   return date.toLocaleDateString("es-SV", { day: "2-digit", month: "short" });
 }
@@ -96,7 +99,9 @@ function fallbackConversations(
     const appointment = appointments
       .filter((row) => row.clientId === client.id)
       .sort((left, right) =>
-        `${right.date}T${right.time}`.localeCompare(`${left.date}T${left.time}`),
+        `${right.date}T${right.time}`.localeCompare(
+          `${left.date}T${left.time}`,
+        ),
       )[0];
 
     return {
@@ -165,9 +170,10 @@ export default function Conversations({
   }, [conversations, selectedId]);
 
   const filtered = conversations.filter((conversation) => {
-    const matchesText = `${conversation.customerName} ${conversation.phoneMasked}`
-      .toLowerCase()
-      .includes(query.toLowerCase());
+    const matchesText =
+      `${conversation.customerName} ${conversation.phoneMasked}`
+        .toLowerCase()
+        .includes(query.toLowerCase());
     const matchesFilter =
       filter === "all" ||
       (filter === "handoff" && conversation.humanHandoff) ||
@@ -204,8 +210,13 @@ export default function Conversations({
     <div className="conversation-workspace">
       <aside className="conversation-inbox">
         <div className="conversation-title">
-          <div><WhatsappLogo size={27} weight="fill" /><h1>Conversaciones</h1></div>
-          <span>{messagingQuery.isLoading ? "Cargando" : `${conversations.length}`}</span>
+          <div>
+            <WhatsappLogo size={27} weight="fill" />
+            <h1>Conversaciones</h1>
+          </div>
+          <span>
+            {messagingQuery.isLoading ? "Cargando" : `${conversations.length}`}
+          </span>
         </div>
         <label className="conversation-search">
           <MagnifyingGlass size={18} />
@@ -216,9 +227,24 @@ export default function Conversations({
           />
         </label>
         <div className="conversation-filters">
-          <button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>Todas</button>
-          <button className={filter === "unread" ? "active" : ""} onClick={() => setFilter("unread")}>Entrantes</button>
-          <button className={filter === "handoff" ? "active" : ""} onClick={() => setFilter("handoff")}>Atención humana</button>
+          <button
+            className={filter === "all" ? "active" : ""}
+            onClick={() => setFilter("all")}
+          >
+            Todas
+          </button>
+          <button
+            className={filter === "unread" ? "active" : ""}
+            onClick={() => setFilter("unread")}
+          >
+            Entrantes
+          </button>
+          <button
+            className={filter === "handoff" ? "active" : ""}
+            onClick={() => setFilter("handoff")}
+          >
+            Atención humana
+          </button>
         </div>
         <div className="conversation-list">
           {filtered.map((conversation, index) => {
@@ -232,11 +258,15 @@ export default function Conversations({
               >
                 <span className="conversation-avatar">
                   <img src={avatarFor(index)} alt="" />
-                  <i><WhatsappLogo size={11} weight="fill" /></i>
+                  <i>
+                    <WhatsappLogo size={11} weight="fill" />
+                  </i>
                 </span>
                 <span className="conversation-copy">
                   <strong>{conversation.customerName}</strong>
-                  <small>{lastMessage?.content || "Sin mensajes almacenados"}</small>
+                  <small>
+                    {lastMessage?.content || "Sin mensajes almacenados"}
+                  </small>
                 </span>
                 <span className="conversation-meta">
                   <time>{formatTime(conversation.lastMessageAt)}</time>
@@ -246,7 +276,9 @@ export default function Conversations({
             );
           })}
           {!filtered.length && (
-            <div className="conversation-empty">No hay conversaciones para este filtro.</div>
+            <div className="conversation-empty">
+              No hay conversaciones para este filtro.
+            </div>
           )}
         </div>
         <div className="conversation-connection">
@@ -260,62 +292,118 @@ export default function Conversations({
             <header>
               <img src={avatarFor(selectedIndex)} alt="" />
               <div>
-                <h2>{selected.customerName} <WhatsappLogo size={15} weight="fill" /></h2>
-                <small>{selected.phoneMasked} · {selected.humanHandoff ? "Atención humana" : "Contacto"}</small>
+                <h2>
+                  {selected.customerName}{" "}
+                  <WhatsappLogo size={15} weight="fill" />
+                </h2>
+                <small>
+                  {selected.phoneMasked} ·{" "}
+                  {selected.humanHandoff ? "Atención humana" : "Contacto"}
+                </small>
               </div>
               <div>
-                <button aria-label="Etiquetas"><Tag size={21} /></button>
-                <button aria-label="Favorito"><Star size={21} /></button>
+                <button aria-label="Etiquetas">
+                  <Tag size={21} />
+                </button>
+                <button aria-label="Favorito">
+                  <Star size={21} />
+                </button>
               </div>
             </header>
             <div className="conversation-messages">
               <span className="conversation-date">Historial guardado</span>
               {selected.messages.length ? (
                 selected.messages.map((message) => (
-                  <article className={message.direction === "outbound" ? "outbound" : "inbound"} key={message.id}>
-                    <p>{message.content || message.eventType || "Evento de WhatsApp"}</p>
+                  <article
+                    className={
+                      message.direction === "outbound" ? "outbound" : "inbound"
+                    }
+                    key={message.id}
+                  >
+                    <p>
+                      {message.content ||
+                        message.eventType ||
+                        "Evento de WhatsApp"}
+                    </p>
                     <time>
                       {formatTime(message.createdAt)}
-                      {message.direction === "outbound" && <Check size={13} weight="bold" />}
+                      {message.direction === "outbound" && (
+                        <Check size={13} weight="bold" />
+                      )}
                     </time>
                   </article>
                 ))
               ) : (
                 <div className="conversation-no-messages">
                   <WhatsappLogo size={35} />
-                  <strong>No hay mensajes almacenados para este contacto</strong>
-                  <p>La bandeja se llenará con el historial real cuando WhatsApp vuelva a habilitarse.</p>
+                  <strong>
+                    No hay mensajes almacenados para este contacto
+                  </strong>
+                  <p>
+                    La bandeja se llenará con el historial real cuando WhatsApp
+                    vuelva a habilitarse.
+                  </p>
                 </div>
               )}
             </div>
             <div className="conversation-composer">
-              <button type="button" disabled aria-label="Añadir nota"><NotePencil size={20} /></button>
-              <input disabled placeholder="WhatsApp está pausado" aria-label="Mensaje pausado" />
-              <button type="button" disabled aria-label="Enviar deshabilitado"><PaperPlaneTilt size={19} weight="fill" /></button>
+              <button type="button" disabled aria-label="Añadir nota">
+                <NotePencil size={20} />
+              </button>
+              <input
+                disabled
+                placeholder="WhatsApp está pausado"
+                aria-label="Mensaje pausado"
+              />
+              <button type="button" disabled aria-label="Enviar deshabilitado">
+                <PaperPlaneTilt size={19} weight="fill" />
+              </button>
             </div>
             <div className="conversation-pause">
               <div>
                 <Pause size={17} weight="fill" />
-                <span><strong>WhatsApp pausado</strong><small>No se enviarán mensajes automáticos ni manuales.</small></span>
+                <span>
+                  <strong>WhatsApp pausado</strong>
+                  <small>
+                    No se enviarán mensajes automáticos ni manuales.
+                  </small>
+                </span>
               </div>
-              <button type="button" onClick={() => onNavigate("ajustes")}>Ver configuración</button>
+              <button type="button" onClick={() => onNavigate("ajustes")}>
+                Ver configuración
+              </button>
             </div>
           </>
         ) : (
-          <div className="conversation-empty-main">Selecciona una conversación.</div>
+          <div className="conversation-empty-main">
+            Selecciona una conversación.
+          </div>
         )}
       </section>
 
       <aside className="conversation-assistant">
-        <header><Sparkle size={25} weight="fill" /><h2>Asistente de citas</h2><span>Seguro</span></header>
+        <header>
+          <Sparkle size={25} weight="fill" />
+          <h2>Asistente de citas</h2>
+          <span>Seguro</span>
+        </header>
         <div className="assistant-content">
-          <div className="assistant-heading"><strong>Resumen del cliente</strong><span>Sin envíos</span></div>
+          <div className="assistant-heading">
+            <strong>Resumen del cliente</strong>
+            <span>Sin envíos</span>
+          </div>
           <div className="assistant-intent">
             <Sparkle size={24} weight="fill" />
             <p>
-              {proposal
-                ? <>Tiene una cita de <strong>{proposal.services.join(", ") || "servicio"}</strong> en la agenda.</>
-                : <>Aún no hay una cita asociada a esta conversación.</>}
+              {proposal ? (
+                <>
+                  Tiene una cita de{" "}
+                  <strong>{proposal.services.join(", ") || "servicio"}</strong>{" "}
+                  en la agenda.
+                </>
+              ) : (
+                <>Aún no hay una cita asociada a esta conversación.</>
+              )}
             </p>
           </div>
           <h3>Propuesta de horario</h3>
@@ -323,28 +411,91 @@ export default function Conversations({
             <div className="assistant-proposal">
               <div className="assistant-date">
                 <CalendarBlank size={24} />
-                <span>{formatLongDate(proposal.startAt)}<strong>{new Date(proposal.startAt).toLocaleTimeString("es-SV", { hour: "2-digit", minute: "2-digit" })}</strong></span>
+                <span>
+                  {formatLongDate(proposal.startAt)}
+                  <strong>
+                    {new Date(proposal.startAt).toLocaleTimeString("es-SV", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </strong>
+                </span>
                 <b>{confirmed ? "Confirmada" : proposal.status}</b>
               </div>
               <dl>
-                <div><dt><Clock size={18} /> Duración</dt><dd>{Math.max(1, Math.round((new Date(proposal.endAt).getTime() - new Date(proposal.startAt).getTime()) / 60_000))} min</dd></div>
-                <div><dt><Scissors size={18} /> Servicio</dt><dd>{proposal.services.join(", ") || "Servicio"}</dd></div>
-                <div><dt><User size={18} /> Profesional</dt><dd>{proposal.staffName}</dd></div>
-                <div><dt>Total</dt><dd>{new Intl.NumberFormat("es-SV", { style: "currency", currency: proposal.currency === "MXN" ? "MXN" : "USD" }).format(proposal.priceCents / 100)}</dd></div>
+                <div>
+                  <dt>
+                    <Clock size={18} /> Duración
+                  </dt>
+                  <dd>
+                    {Math.max(
+                      1,
+                      Math.round(
+                        (new Date(proposal.endAt).getTime() -
+                          new Date(proposal.startAt).getTime()) /
+                          60_000,
+                      ),
+                    )}{" "}
+                    min
+                  </dd>
+                </div>
+                <div>
+                  <dt>
+                    <Scissors size={18} /> Servicio
+                  </dt>
+                  <dd>{proposal.services.join(", ") || "Servicio"}</dd>
+                </div>
+                <div>
+                  <dt>
+                    <User size={18} /> Profesional
+                  </dt>
+                  <dd>{proposal.staffName}</dd>
+                </div>
+                <div>
+                  <dt>Total</dt>
+                  <dd>
+                    {new Intl.NumberFormat("es-SV", {
+                      style: "currency",
+                      currency: proposal.currency === "MXN" ? "MXN" : "USD",
+                    }).format(proposal.priceCents / 100)}
+                  </dd>
+                </div>
               </dl>
             </div>
           ) : (
-            <div className="assistant-no-proposal">No hay una cita próxima para mostrar.</div>
+            <div className="assistant-no-proposal">
+              No hay una cita próxima para mostrar.
+            </div>
           )}
-          <button className={confirmed ? "assistant-primary confirmed" : "assistant-primary"} onClick={confirmAppointment}>
+          <button
+            className={
+              confirmed ? "assistant-primary confirmed" : "assistant-primary"
+            }
+            onClick={confirmAppointment}
+          >
             {proposal ? <CalendarBlank size={19} /> : <CaretDown size={19} />}
-            {proposal ? (confirmed ? "Cita confirmada" : "Confirmar sin notificar") : "Abrir agenda"}
+            {proposal
+              ? confirmed
+                ? "Cita confirmada"
+                : "Confirmar sin notificar"
+              : "Abrir agenda"}
           </button>
-          <button className="assistant-secondary" onClick={() => onNavigate("agenda")}><Clock size={19} /> Ver agenda completa</button>
-          <button className="assistant-notes">Notas del cliente <span>+</span></button>
+          <button
+            className="assistant-secondary"
+            onClick={() => onNavigate("agenda")}
+          >
+            <Clock size={19} /> Ver agenda completa
+          </button>
+          <button className="assistant-notes">
+            Notas del cliente <span>+</span>
+          </button>
         </div>
       </aside>
-      {notice && <div className="unified-toast" role="status">{notice}</div>}
+      {notice && (
+        <div className="unified-toast" role="status">
+          {notice}
+        </div>
+      )}
     </div>
   );
 }

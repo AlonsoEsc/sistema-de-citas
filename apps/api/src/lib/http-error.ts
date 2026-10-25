@@ -25,7 +25,10 @@ export function notFound(message = "No encontrado", code = "NOT_FOUND") {
   return new HttpError(404, message, code);
 }
 
-export function tooManyRequests(message = "Demasiadas solicitudes", code = "TOO_MANY_REQUESTS") {
+export function tooManyRequests(
+  message = "Demasiadas solicitudes",
+  code = "TOO_MANY_REQUESTS",
+) {
   return new HttpError(429, message, code);
 }
 

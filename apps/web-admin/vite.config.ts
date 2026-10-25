@@ -11,12 +11,12 @@ export default defineConfig({
           charts: ["recharts"],
           icons: ["lucide-react", "@phosphor-icons/react"],
           motion: ["motion"],
-          query: ["@tanstack/react-query", "axios"]
-        }
-      }
-    }
+          query: ["@tanstack/react-query", "axios"],
+        },
+      },
+    },
   },
   server: {
-    host: "0.0.0.0"
-  }
+    host: "0.0.0.0",
+  },
 });

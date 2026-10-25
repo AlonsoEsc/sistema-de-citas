@@ -1,12 +1,15 @@
 import type { Appointment, StaffSchedule } from "@prisma/client";
-import { combineDateAndMinutes, parseTimeToMinutes } from "../lib/date-utils.js";
+import {
+  combineDateAndMinutes,
+  parseTimeToMinutes,
+} from "../lib/date-utils.js";
 
 const SLOT_STEP_MINUTES = 15;
 
 function isInsideBreak(
   slotStartMinute: number,
   slotEndMinute: number,
-  breakJson: unknown
+  breakJson: unknown,
 ): boolean {
   if (!Array.isArray(breakJson)) {
     return false;
@@ -28,15 +31,22 @@ function isInsideBreak(
   });
 }
 
-function overlapsExisting(slotStart: Date, slotEnd: Date, appointments: Appointment[]): boolean {
-  return appointments.some((appointment) => slotStart < appointment.endAt && slotEnd > appointment.startAt);
+function overlapsExisting(
+  slotStart: Date,
+  slotEnd: Date,
+  appointments: Appointment[],
+): boolean {
+  return appointments.some(
+    (appointment) =>
+      slotStart < appointment.endAt && slotEnd > appointment.startAt,
+  );
 }
 
 export function buildAvailabilityForStaff(
   date: string,
   durationMinutes: number,
   schedule: StaffSchedule[],
-  appointments: Appointment[]
+  appointments: Appointment[],
 ) {
   const slots: { startAt: string; endAt: string }[] = [];
 
@@ -44,7 +54,11 @@ export function buildAvailabilityForStaff(
     const segmentStart = parseTimeToMinutes(segment.startTime);
     const segmentEnd = parseTimeToMinutes(segment.endTime);
 
-    for (let minute = segmentStart; minute + durationMinutes <= segmentEnd; minute += SLOT_STEP_MINUTES) {
+    for (
+      let minute = segmentStart;
+      minute + durationMinutes <= segmentEnd;
+      minute += SLOT_STEP_MINUTES
+    ) {
       const slotEndMinute = minute + durationMinutes;
 
       if (isInsideBreak(minute, slotEndMinute, segment.breakJson)) {
@@ -60,7 +74,7 @@ export function buildAvailabilityForStaff(
 
       slots.push({
         startAt: slotStartAt.toISOString(),
-        endAt: slotEndAt.toISOString()
+        endAt: slotEndAt.toISOString(),
       });
     }
   }

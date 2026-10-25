@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { api, onUnauthorized, setAuthToken } from "../lib/api";
 
 type SessionUser = {
@@ -99,9 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       can(permission) {
         return session?.user.permissions.includes(permission) ?? false;
-      }
+      },
     }),
-    [session, logout]
+    [session, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,14 +1,29 @@
-import React, { useState, useMemo } from 'react';
-import { Appointment, Professional, Service, Client, AppointmentStatus } from '../types';
-import { Plus, ChevronLeft, ChevronRight, X, Clock, User, Scissors, DollarSign } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState, useMemo } from "react";
+import {
+  Appointment,
+  Professional,
+  Service,
+  Client,
+  AppointmentStatus,
+} from "../types";
+import {
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Clock,
+  User,
+  Scissors,
+  DollarSign,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 interface AgendaProps {
   appointments: Appointment[];
   professionals: Professional[];
   services: Service[];
   clients: Client[];
-  onAddAppointment: (appointment: Omit<Appointment, 'id'>) => void;
+  onAddAppointment: (appointment: Omit<Appointment, "id">) => void;
   onUpdateAppointmentStatus: (id: string, status: AppointmentStatus) => void;
   onDeleteAppointment: (id: string) => void;
 }
@@ -25,18 +40,21 @@ export default function Agenda({
   clients,
   onAddAppointment,
   onUpdateAppointmentStatus,
-  onDeleteAppointment
+  onDeleteAppointment,
 }: AgendaProps) {
-  const [currentAnchorDate, setCurrentAnchorDate] = useState<Date>(() => new Date());
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [currentAnchorDate, setCurrentAnchorDate] = useState<Date>(
+    () => new Date(),
+  );
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<Appointment | null>(null);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
 
   // New appointment form state
-  const [newClientId, setNewClientId] = useState('');
-  const [newServiceId, setNewServiceId] = useState('');
-  const [newProfessionalId, setNewProfessionalId] = useState('');
+  const [newClientId, setNewClientId] = useState("");
+  const [newServiceId, setNewServiceId] = useState("");
+  const [newProfessionalId, setNewProfessionalId] = useState("");
   const [newDate, setNewDate] = useState(() => localDateString());
-  const [newTime, setNewTime] = useState('12:00');
+  const [newTime, setNewTime] = useState("12:00");
 
   // Calculate the start of the week (Sunday) for the current anchor date
   const weekDays = useMemo(() => {
@@ -44,8 +62,13 @@ export default function Agenda({
     const dayOfWeek = startOfWeek.getDay(); // 0: Sunday, 1: Monday...
     startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
 
-    const days: { date: Date; dateString: string; label: string; isToday: boolean }[] = [];
-    const labels = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+    const days: {
+      date: Date;
+      dateString: string;
+      label: string;
+      isToday: boolean;
+    }[] = [];
+    const labels = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
 
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
@@ -56,7 +79,7 @@ export default function Agenda({
         date: d,
         dateString,
         label: `${labels[i]} ${d.getDate()}/${d.getMonth() + 1}`,
-        isToday
+        isToday,
       });
     }
     return days;
@@ -67,8 +90,18 @@ export default function Agenda({
     const start = weekDays[0].date;
     const end = weekDays[6].date;
     const monthNames = [
-      'ene', 'feb', 'mar', 'abr', 'may', 'jun',
-      'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+      "ene",
+      "feb",
+      "mar",
+      "abr",
+      "may",
+      "jun",
+      "jul",
+      "ago",
+      "sep",
+      "oct",
+      "nov",
+      "dic",
     ];
     const startMonth = monthNames[start.getMonth()];
     const endMonth = monthNames[end.getMonth()];
@@ -82,9 +115,11 @@ export default function Agenda({
   // Hours of the day to render in calendar grid (7:00 to 20:00)
   const hours = Array.from({ length: 14 }, (_, i) => i + 7);
 
-  const navigateWeek = (direction: 'next' | 'prev') => {
+  const navigateWeek = (direction: "next" | "prev") => {
     const newAnchor = new Date(currentAnchorDate);
-    newAnchor.setDate(currentAnchorDate.getDate() + (direction === 'next' ? 7 : -7));
+    newAnchor.setDate(
+      currentAnchorDate.getDate() + (direction === "next" ? 7 : -7),
+    );
     setCurrentAnchorDate(newAnchor);
   };
 
@@ -95,7 +130,7 @@ export default function Agenda({
   // Map appointment matches to cells
   const getAppointmentForSlot = (dateString: string, hour: number) => {
     return appointments.find((app) => {
-      const [appHourStr] = app.time.split(':');
+      const [appHourStr] = app.time.split(":");
       const appHour = parseInt(appHourStr);
       return app.date === dateString && appHour === hour;
     });
@@ -107,7 +142,7 @@ export default function Agenda({
       setSelectedAppointment(existing);
     } else {
       setNewDate(dateString);
-      setNewTime(`${hour.toString().padStart(2, '0')}:00`);
+      setNewTime(`${hour.toString().padStart(2, "0")}:00`);
       if (clients.length > 0) setNewClientId(clients[0].id);
       if (services.length > 0) setNewServiceId(services[0].id);
       if (professionals.length > 0) setNewProfessionalId(professionals[0].id);
@@ -117,9 +152,9 @@ export default function Agenda({
 
   const submitNewAppointment = (e: React.FormEvent) => {
     e.preventDefault();
-    const client = clients.find(c => c.id === newClientId);
-    const service = services.find(s => s.id === newServiceId);
-    const professional = professionals.find(p => p.id === newProfessionalId);
+    const client = clients.find((c) => c.id === newClientId);
+    const service = services.find((s) => s.id === newServiceId);
+    const professional = professionals.find((p) => p.id === newProfessionalId);
 
     if (!client || !service || !professional) return;
 
@@ -134,9 +169,9 @@ export default function Agenda({
       professionalName: professional.name,
       date: newDate,
       time: newTime,
-      status: 'confirmed',
+      status: "confirmed",
       price: service.price,
-      duration: service.duration
+      duration: service.duration,
     });
 
     setIsNewModalOpen(false);
@@ -144,21 +179,23 @@ export default function Agenda({
 
   const getStatusBadge = (status: AppointmentStatus) => {
     const styles = {
-      completed: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/40',
-      confirmed: 'bg-blue-950/60 text-blue-300 border-blue-800/40',
-      pending: 'bg-amber-950/60 text-amber-300 border-amber-800/40',
-      cancelled: 'bg-rose-950/60 text-rose-300 border-rose-800/40',
-      no_show: 'bg-zinc-800 text-zinc-400 border-zinc-700/50'
+      completed: "bg-emerald-950/60 text-emerald-300 border-emerald-800/40",
+      confirmed: "bg-blue-950/60 text-blue-300 border-blue-800/40",
+      pending: "bg-amber-950/60 text-amber-300 border-amber-800/40",
+      cancelled: "bg-rose-950/60 text-rose-300 border-rose-800/40",
+      no_show: "bg-zinc-800 text-zinc-400 border-zinc-700/50",
     };
     const labels = {
-      completed: 'Completada',
-      confirmed: 'Confirmada',
-      pending: 'Pendiente',
-      cancelled: 'Cancelada',
-      no_show: 'No Show'
+      completed: "Completada",
+      confirmed: "Confirmada",
+      pending: "Pendiente",
+      cancelled: "Cancelada",
+      no_show: "No Show",
     };
     return (
-      <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${styles[status]}`}>
+      <span
+        className={`px-2.5 py-1 text-xs font-bold rounded-full border ${styles[status]}`}
+      >
         {labels[status]}
       </span>
     );
@@ -169,15 +206,20 @@ export default function Agenda({
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#121212]/50 backdrop-blur-md p-5 rounded-2xl border border-[#2a2a2a]">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight font-sans">Agenda Operativa</h1>
-          <p className="text-xs text-gray-400 font-medium mt-0.5">Gestión de turnos semanales y estados de citas</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight font-sans">
+            Agenda Operativa
+          </h1>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">
+            Gestión de turnos semanales y estados de citas
+          </p>
         </div>
 
         <button
           onClick={() => {
             if (clients.length > 0) setNewClientId(clients[0].id);
             if (services.length > 0) setNewServiceId(services[0].id);
-            if (professionals.length > 0) setNewProfessionalId(professionals[0].id);
+            if (professionals.length > 0)
+              setNewProfessionalId(professionals[0].id);
             setIsNewModalOpen(true);
           }}
           className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider cursor-pointer border border-blue-500/20"
@@ -189,7 +231,9 @@ export default function Agenda({
 
       {/* Navigation and Date Picker Row */}
       <div className="flex justify-between items-center bg-[#141414] p-3 rounded-xl border border-[#2a2a2a]">
-        <h2 className="text-base font-bold text-white font-sans tracking-tight">{periodLabel}</h2>
+        <h2 className="text-base font-bold text-white font-sans tracking-tight">
+          {periodLabel}
+        </h2>
 
         <div className="flex items-center space-x-2">
           <button
@@ -199,13 +243,13 @@ export default function Agenda({
             Hoy
           </button>
           <button
-            onClick={() => navigateWeek('prev')}
+            onClick={() => navigateWeek("prev")}
             className="p-1.5 border border-[#2a2a2a] rounded-lg text-gray-400 bg-[#1a1a1a] hover:bg-[#222] hover:text-white"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
-            onClick={() => navigateWeek('next')}
+            onClick={() => navigateWeek("next")}
             className="p-1.5 border border-[#2a2a2a] rounded-lg text-gray-400 bg-[#1a1a1a] hover:bg-[#222] hover:text-white"
           >
             <ChevronRight className="w-4 h-4" />
@@ -218,22 +262,31 @@ export default function Agenda({
         <table className="w-full border-collapse min-w-[700px]">
           <thead>
             <tr className="bg-[#1a1a1a] border-b border-[#2a2a2a]">
-              <th className="w-16 p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">Hora</th>
+              <th className="w-16 p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">
+                Hora
+              </th>
               {weekDays.map((day) => (
                 <th
                   key={day.dateString}
                   className={`p-3 text-xs font-bold border-l border-[#2a2a2a] text-center ${
-                    day.isToday ? 'bg-blue-500/10 text-blue-400' : 'text-gray-300'
+                    day.isToday
+                      ? "bg-blue-500/10 text-blue-400"
+                      : "text-gray-300"
                   }`}
                 >
-                  <span className="uppercase tracking-wide font-sans">{day.label}</span>
+                  <span className="uppercase tracking-wide font-sans">
+                    {day.label}
+                  </span>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {hours.map((hour) => (
-              <tr key={hour} className="border-b border-[#2a2a2a] hover:bg-[#1a1a1a]/20 transition-all">
+              <tr
+                key={hour}
+                className="border-b border-[#2a2a2a] hover:bg-[#1a1a1a]/20 transition-all"
+              >
                 {/* Hour indicator column */}
                 <td className="p-3 text-xs font-bold text-gray-500 text-center select-none bg-[#161616]">
                   {hour}:00
@@ -241,13 +294,18 @@ export default function Agenda({
 
                 {/* Day cells */}
                 {weekDays.map((day) => {
-                  const appointment = getAppointmentForSlot(day.dateString, hour);
+                  const appointment = getAppointmentForSlot(
+                    day.dateString,
+                    hour,
+                  );
                   return (
                     <td
                       key={`${day.dateString}-${hour}`}
                       onClick={() => handleCellClick(day.dateString, hour)}
                       className={`p-2 border-l border-[#2a2a2a] align-top min-h-[50px] relative transition-colors cursor-pointer ${
-                        day.isToday ? 'bg-blue-500/5 hover:bg-blue-500/10' : 'hover:bg-[#1a1a1a]/30'
+                        day.isToday
+                          ? "bg-blue-500/5 hover:bg-blue-500/10"
+                          : "hover:bg-[#1a1a1a]/30"
                       }`}
                     >
                       {appointment ? (
@@ -258,24 +316,30 @@ export default function Agenda({
                             setSelectedAppointment(appointment);
                           }}
                           className={`p-2 rounded-xl border text-left shadow-sm flex flex-col justify-between h-full select-none ${
-                            appointment.status === 'completed'
-                              ? 'bg-emerald-950/40 border-emerald-800/40 text-emerald-300'
-                              : appointment.status === 'cancelled'
-                              ? 'bg-rose-950/40 border-rose-800/40 text-rose-400 line-through opacity-70'
-                              : appointment.status === 'no_show'
-                              ? 'bg-zinc-800/95 border-zinc-700/60 text-zinc-400'
-                              : 'bg-blue-950/40 border-blue-800/40 text-blue-300'
+                            appointment.status === "completed"
+                              ? "bg-emerald-950/40 border-emerald-800/40 text-emerald-300"
+                              : appointment.status === "cancelled"
+                                ? "bg-rose-950/40 border-rose-800/40 text-rose-400 line-through opacity-70"
+                                : appointment.status === "no_show"
+                                  ? "bg-zinc-800/95 border-zinc-700/60 text-zinc-400"
+                                  : "bg-blue-950/40 border-blue-800/40 text-blue-300"
                           }`}
                         >
                           <div>
                             <p className="text-[10px] font-extrabold uppercase tracking-wide truncate opacity-90">
                               {appointment.serviceName}
                             </p>
-                            <p className="text-xs font-bold truncate mt-0.5">{appointment.clientName}</p>
+                            <p className="text-xs font-bold truncate mt-0.5">
+                              {appointment.clientName}
+                            </p>
                           </div>
                           <div className="flex items-center justify-between mt-2 pt-1 border-t border-white/10 text-[9px] font-bold opacity-80">
-                            <span className="truncate">{appointment.professionalName}</span>
-                            <span className="font-extrabold text-white">${appointment.price.toFixed(0)}</span>
+                            <span className="truncate">
+                              {appointment.professionalName}
+                            </span>
+                            <span className="font-extrabold text-white">
+                              ${appointment.price.toFixed(0)}
+                            </span>
                           </div>
                         </motion.div>
                       ) : (
@@ -304,8 +368,12 @@ export default function Agenda({
             >
               <div className="bg-[#1a1a1a] p-5 flex justify-between items-center border-b border-[#2a2a2a]">
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">Detalle de cita</span>
-                  <h3 className="text-lg font-bold font-sans tracking-tight text-white">{selectedAppointment.serviceName}</h3>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">
+                    Detalle de cita
+                  </span>
+                  <h3 className="text-lg font-bold font-sans tracking-tight text-white">
+                    {selectedAppointment.serviceName}
+                  </h3>
                 </div>
                 <button
                   onClick={() => setSelectedAppointment(null)}
@@ -320,10 +388,16 @@ export default function Agenda({
                 <div className="flex items-start space-x-3 p-3 bg-[#121212] rounded-xl border border-[#2a2a2a]">
                   <User className="w-5 h-5 text-gray-500 mt-0.5" />
                   <div>
-                    <h4 className="text-sm font-bold text-white">{selectedAppointment.clientName}</h4>
-                    <p className="text-xs text-gray-400 font-medium mt-0.5">Tel: {selectedAppointment.clientPhone}</p>
+                    <h4 className="text-sm font-bold text-white">
+                      {selectedAppointment.clientName}
+                    </h4>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">
+                      Tel: {selectedAppointment.clientPhone}
+                    </p>
                     {selectedAppointment.clientEmail && (
-                      <p className="text-xs text-gray-400 font-medium">Email: {selectedAppointment.clientEmail}</p>
+                      <p className="text-xs text-gray-400 font-medium">
+                        Email: {selectedAppointment.clientEmail}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -333,57 +407,95 @@ export default function Agenda({
                   <div className="p-3 bg-[#121212] rounded-xl border border-[#2a2a2a] flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-blue-400" />
                     <div>
-                      <span className="text-[9px] font-bold text-gray-500 uppercase block">Hora y Fecha</span>
-                      <span className="font-bold text-white">{selectedAppointment.date} {selectedAppointment.time}</span>
+                      <span className="text-[9px] font-bold text-gray-500 uppercase block">
+                        Hora y Fecha
+                      </span>
+                      <span className="font-bold text-white">
+                        {selectedAppointment.date} {selectedAppointment.time}
+                      </span>
                     </div>
                   </div>
                   <div className="p-3 bg-[#121212] rounded-xl border border-[#2a2a2a] flex items-center space-x-2">
                     <Scissors className="w-4 h-4 text-purple-400" />
                     <div>
-                      <span className="text-[9px] font-bold text-gray-500 uppercase block">Profesional</span>
-                      <span className="font-bold text-white">{selectedAppointment.professionalName}</span>
+                      <span className="text-[9px] font-bold text-gray-500 uppercase block">
+                        Profesional
+                      </span>
+                      <span className="font-bold text-white">
+                        {selectedAppointment.professionalName}
+                      </span>
                     </div>
                   </div>
                   <div className="p-3 bg-[#121212] rounded-xl border border-[#2a2a2a] flex items-center space-x-2">
                     <DollarSign className="w-4 h-4 text-emerald-400" />
                     <div>
-                      <span className="text-[9px] font-bold text-gray-500 uppercase block">Monto total</span>
-                      <span className="font-bold text-white">${selectedAppointment.price.toFixed(2)}</span>
+                      <span className="text-[9px] font-bold text-gray-500 uppercase block">
+                        Monto total
+                      </span>
+                      <span className="font-bold text-white">
+                        ${selectedAppointment.price.toFixed(2)}
+                      </span>
                     </div>
                   </div>
                   <div className="p-3 bg-[#121212] rounded-xl border border-[#2a2a2a] flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-amber-400" />
                     <div>
-                      <span className="text-[9px] font-bold text-gray-500 uppercase block">Duración</span>
-                      <span className="font-bold text-white">{selectedAppointment.duration} minutos</span>
+                      <span className="text-[9px] font-bold text-gray-500 uppercase block">
+                        Duración
+                      </span>
+                      <span className="font-bold text-white">
+                        {selectedAppointment.duration} minutos
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Status indicator row */}
                 <div className="flex items-center justify-between py-2">
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Estado actual</span>
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    Estado actual
+                  </span>
                   {getStatusBadge(selectedAppointment.status)}
                 </div>
 
                 {/* State Controls Form */}
                 <div className="space-y-2 pt-3 border-t border-[#2a2a2a]">
-                  <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block font-sans">Cambiar estado</span>
+                  <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block font-sans">
+                    Cambiar estado
+                  </span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {(['confirmed', 'completed', 'no_show', 'cancelled'] as AppointmentStatus[]).map((status) => {
-                      const labels = { confirmed: 'Confirmar', completed: 'Completar', no_show: 'No Show', cancelled: 'Cancelar', pending: 'Pendiente' };
+                    {(
+                      [
+                        "confirmed",
+                        "completed",
+                        "no_show",
+                        "cancelled",
+                      ] as AppointmentStatus[]
+                    ).map((status) => {
+                      const labels = {
+                        confirmed: "Confirmar",
+                        completed: "Completar",
+                        no_show: "No Show",
+                        cancelled: "Cancelar",
+                        pending: "Pendiente",
+                      };
                       const isCurrent = selectedAppointment.status === status;
                       return (
                         <button
                           key={status}
                           onClick={() => {
-                            onUpdateAppointmentStatus(selectedAppointment.id, status);
-                            setSelectedAppointment(prev => prev ? { ...prev, status } : null);
+                            onUpdateAppointmentStatus(
+                              selectedAppointment.id,
+                              status,
+                            );
+                            setSelectedAppointment((prev) =>
+                              prev ? { ...prev, status } : null,
+                            );
                           }}
                           className={`px-2.5 py-2 text-[10px] font-bold rounded-xl border text-center transition-all cursor-pointer ${
                             isCurrent
-                              ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                              : 'bg-[#1a1a1a] text-gray-300 border-[#2a2a2a] hover:bg-[#222]'
+                              ? "bg-blue-600 text-white border-blue-500 shadow-sm"
+                              : "bg-[#1a1a1a] text-gray-300 border-[#2a2a2a] hover:bg-[#222]"
                           }`}
                         >
                           {labels[status]}
@@ -396,7 +508,9 @@ export default function Agenda({
                 {/* Destructive Delete Button */}
                 <button
                   onClick={() => {
-                    const confirmDel = window.confirm('¿Estás seguro de que deseas eliminar permanentemente esta cita de la agenda?');
+                    const confirmDel = window.confirm(
+                      "¿Estás seguro de que deseas eliminar permanentemente esta cita de la agenda?",
+                    );
                     if (confirmDel) {
                       onDeleteAppointment(selectedAppointment.id);
                       setSelectedAppointment(null);
@@ -424,8 +538,12 @@ export default function Agenda({
             >
               <div className="bg-[#1a1a1a] p-5 flex justify-between items-center border-b border-[#2a2a2a]">
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">Nueva cita</span>
-                  <h3 className="text-lg font-bold font-sans tracking-tight text-white">Agendar cita manual</h3>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">
+                    Nueva cita
+                  </span>
+                  <h3 className="text-lg font-bold font-sans tracking-tight text-white">
+                    Agendar cita manual
+                  </h3>
                 </div>
                 <button
                   onClick={() => setIsNewModalOpen(false)}
@@ -438,48 +556,66 @@ export default function Agenda({
               <form onSubmit={submitNewAppointment} className="p-5 space-y-4">
                 {/* Client selection */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">Cliente</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
+                    Cliente
+                  </label>
                   <select
                     value={newClientId}
                     onChange={(e) => setNewClientId(e.target.value)}
                     className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3 text-sm text-gray-200 focus:border-blue-500 outline-none font-sans font-medium"
                     required
                   >
-                    <option value="" disabled className="bg-[#141414]">Selecciona un cliente</option>
+                    <option value="" disabled className="bg-[#141414]">
+                      Selecciona un cliente
+                    </option>
                     {clients.map((c) => (
-                      <option key={c.id} value={c.id} className="bg-[#141414]">{c.name} ({c.phone})</option>
+                      <option key={c.id} value={c.id} className="bg-[#141414]">
+                        {c.name} ({c.phone})
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 {/* Service Selection */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">Servicio</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
+                    Servicio
+                  </label>
                   <select
                     value={newServiceId}
                     onChange={(e) => setNewServiceId(e.target.value)}
                     className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3 text-sm text-gray-200 focus:border-blue-500 outline-none font-sans font-medium"
                     required
                   >
-                    <option value="" disabled className="bg-[#141414]">Selecciona el servicio</option>
+                    <option value="" disabled className="bg-[#141414]">
+                      Selecciona el servicio
+                    </option>
                     {services.map((s) => (
-                      <option key={s.id} value={s.id} className="bg-[#141414]">{s.name} - {s.duration} min (${s.price})</option>
+                      <option key={s.id} value={s.id} className="bg-[#141414]">
+                        {s.name} - {s.duration} min (${s.price})
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 {/* Professional Selection */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">Profesional</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
+                    Profesional
+                  </label>
                   <select
                     value={newProfessionalId}
                     onChange={(e) => setNewProfessionalId(e.target.value)}
                     className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3 text-sm text-gray-200 focus:border-blue-500 outline-none font-sans font-medium"
                     required
                   >
-                    <option value="" disabled className="bg-[#141414]">Selecciona un profesional</option>
+                    <option value="" disabled className="bg-[#141414]">
+                      Selecciona un profesional
+                    </option>
                     {professionals.map((p) => (
-                      <option key={p.id} value={p.id} className="bg-[#141414]">{p.name}</option>
+                      <option key={p.id} value={p.id} className="bg-[#141414]">
+                        {p.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -487,7 +623,9 @@ export default function Agenda({
                 {/* Date & Time fields */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">Fecha</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
+                      Fecha
+                    </label>
                     <input
                       type="date"
                       value={newDate}
@@ -497,7 +635,9 @@ export default function Agenda({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">Hora</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block">
+                      Hora
+                    </label>
                     <input
                       type="time"
                       value={newTime}
