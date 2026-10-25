@@ -1,114 +1,75 @@
-# Sistema de Citas SaaS (Barberias, Salones y Clinicas)
+# Agenda de Citas (nombre provisional)
 
-Implementacion basada en `SaaSBase.md` con arquitectura multi-tenant y producto listo para comercializar:
+SaaS multi-tenant de reservas para negocios con agenda: barberías, salones de belleza,
+clínicas, consultorios médicos y odontológicos. Cada negocio (tenant) tiene su panel
+administrativo, su portal público de reservas y recordatorios por email, SMS o WhatsApp.
 
-- `apps/api`: API Fastify + Prisma + Postgres
-- `apps/worker`: worker para outbox y reintentos de notificaciones
-- `apps/web-admin`: dashboard administrativo profesional (agenda, catalogos, reportes, settings)
-- `apps/web-booking`: portal publico de reservas (mobile-first)
+El nombre comercial es configurable: `VITE_PRODUCT_NAME` en los frontends y
+`PRODUCT_NAME` en la API (valor por defecto en `packages/shared`).
 
-## Lo que ya incluye
+## Estructura
 
-- Multi-tenant por `tenant_id`
-- Auth JWT con login por `tenantSlug`
-- RBAC base + entitlements por plan
-- Modulos CRUD: staff, servicios, clientes
-- Agenda con creacion/reagendado y control anti doble-reserva
-- Portal publico `/public/:tenantSlug/*`
-- Login booking sin password con OTP por telefono
-- Opcional: social login Google/Facebook + OTP de telefono
-- Booking oculto hasta login verificado y bloqueo por telefono con cita activa
-- Tras login en booking se muestra panel con dos opciones: hacer cita o cancelar cita
-- Outbox pattern para notificaciones (email/sms/whatsapp)
-- Worker con reintentos exponenciales
-- Evolution API multi-tenant con webhooks autenticados y estados de entrega
-- Asistente de WhatsApp para agendar, confirmar, cancelar y reagendar
-- Chatwoot para handoff y respuestas de agentes humanos
-- Reportes base (citas, ingresos, no-show, rendimiento por staff)
+| Carpeta            | Contenido                                                                 |
+| ------------------ | ------------------------------------------------------------------------- |
+| `apps/api`         | API REST: Fastify 5, Prisma 6, PostgreSQL                                 |
+| `apps/worker`      | Procesa la cola de notificaciones (outbox) con reintentos y recordatorios |
+| `apps/web-admin`   | Panel del negocio: React 18, Vite, Tailwind 4, TanStack Query             |
+| `apps/web-booking` | Portal público de reservas con verificación de teléfono por OTP           |
+| `packages/shared`  | Código compartido entre apps                                              |
+| `infra/messaging`  | Evolution API (WhatsApp Cloud API) y Chatwoot para atención humana        |
+| `docs/`            | Endpoints, integración de WhatsApp, arquitectura y hoja de ruta           |
 
-## Stack
+## Requisitos
 
-- Backend: Node.js + Fastify + Prisma
-- DB: Postgres
-- Frontend: React + Vite + MUI + TanStack Query + FullCalendar
-- Jobs: Worker Node.js (polling outbox)
+- Node.js 24 o superior
+- PostgreSQL 16, local o con `docker compose up -d`
 
 ## Arranque local
 
-1. Levanta infraestructura:
-
 ```bash
-docker compose up -d
-```
-
-2. Crea variables de entorno:
-
-```bash
-copy .env.example .env
-```
-
-3. Instala dependencias:
-
-```bash
+cp .env.example .env          # y ajusta DATABASE_URL, JWT_SECRET y ENCRYPTION_KEY
 npm install
-```
-
-4. Genera cliente Prisma, migra y seed:
-
-```bash
 npm --workspace apps/api run prisma:generate
-npm --workspace apps/api run prisma:migrate -- --name init
+npm --workspace apps/api run prisma:deploy
 npm --workspace apps/api run prisma:seed
-```
-
-5. (Recomendado) aplica hardening de DB anti-overlap a nivel Postgres:
-
-Archivo: `apps/api/prisma/hardening.sql`
-
-6. Inicia todo:
-
-```bash
 npm run dev
 ```
 
-La instalación de Evolution API, Chatwoot, plantillas oficiales y webhooks está
-documentada en [`docs/whatsapp-integration.md`](docs/whatsapp-integration.md).
+| Servicio | URL                   |
+| -------- | --------------------- |
+| API      | http://localhost:4000 |
+| Panel    | http://localhost:5173 |
+| Reservas | http://localhost:5174 |
 
-Puertos:
+El seed crea el negocio `demo-barberia` con tres usuarios de prueba (owner, staff y
+recepción). Las credenciales están en `apps/api/prisma/seed.ts` y el panel las precarga
+solo en modo desarrollo.
 
-- API: `http://localhost:4000`
-- Admin: `http://localhost:5173`
-- Booking: `http://localhost:5174`
+## Scripts
 
-## Credenciales demo seed
+| Comando          | Qué hace                                        |
+| ---------------- | ----------------------------------------------- |
+| `npm run dev`    | API, worker, panel y portal en paralelo         |
+| `npm run check`  | Lint, typecheck y tests (lo mismo que corre CI) |
+| `npm run format` | Aplica Prettier a todo el repositorio           |
+| `npm run build`  | Compila todos los workspaces                    |
 
-- Tenant slug para todos: `demo-barberia`
-- Owner/Admin:
-  - Email: `admin@demo.com`
-  - Password: `Admin1234!`
-- Staff:
-  - Email: `staff@demo.com`
-  - Password: `Staff1234!`
-- Recepción:
-  - Email: `recepcion@demo.com`
-  - Password: `Recepcion1234!`
+Los tests de la API son de integración y necesitan PostgreSQL con las migraciones
+aplicadas.
 
-## Endpoints clave
+## Seguridad
 
-- Auth: `/auth/login`
-- Staff: `/staff`
-- Services: `/services`
-- Customers: `/customers`
-- Appointments: `/appointments`
-- Public booking: `/public/:tenantSlug/services`, `/public/:tenantSlug/staff`, `/public/:tenantSlug/availability`, `/public/:tenantSlug/book`
-- Public auth: `/public/:tenantSlug/auth/start`, `/public/:tenantSlug/auth/verify`
+- Tokens de administración con tipo y caducidad; los de cliente del portal no sirven
+  contra la API de administración.
+- Permisos por rol en cada ruta (`appointments.manage`, `customers.manage`,
+  `settings.manage`, etc.). El rol `owner` tiene todos.
+- OTP limitado por IP y por teléfono; el código nunca se devuelve fuera de desarrollo.
+- En producción la API no arranca con `JWT_SECRET` débil y CORS queda restringido a
+  `ADMIN_BASE_URL`, `PUBLIC_BOOKING_BASE_URL` o `CORS_ORIGINS`.
 
-## Notas de comercializacion
+## Documentación
 
-- Ya soporta estrategia de dos productos via entitlements:
-  - Con WhatsApp (`notifications.whatsapp.enabled=true`)
-  - Sin WhatsApp (email/sms)
-- Puedes vender primero con esta base y luego ampliar:
-  - Stripe/suscripciones automaticas
-  - WhatsApp BSP real
-  - reportes avanzados y auditoria
+- [Hoja de ruta](docs/roadmap.md)
+- [Endpoints de la API](docs/api/endpoints.md)
+- [Integración de WhatsApp y Chatwoot](docs/whatsapp-integration.md)
+- [Visión original de la arquitectura](docs/architecture/vision-original.md)
