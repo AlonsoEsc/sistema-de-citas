@@ -67,10 +67,16 @@ aplicadas.
 - OTP limitado por IP y por teléfono; el código nunca se devuelve fuera de desarrollo.
 - En producción la API no arranca con `JWT_SECRET` débil y CORS queda restringido a
   `ADMIN_BASE_URL`, `PUBLIC_BOOKING_BASE_URL` o `CORS_ORIGINS`.
+- Todo acceso a datos de un negocio pasa por `forTenant()`, que filtra lecturas y fuerza
+  el `tenantId` en escrituras.
+- Las URLs de integraciones se validan contra SSRF (HTTPS y sin redes privadas en
+  producción).
+- Fuera de producción el worker no contacta proveedores (`WORKER_SEND_MODE=log`).
 
 ## Documentación
 
 - [Hoja de ruta](docs/roadmap.md)
-- [Endpoints de la API](docs/api/endpoints.md)
+- [Arquitectura del backend](docs/architecture/backend.md)
+- [Endpoints de la API](docs/api/endpoints.md) (OpenAPI en `/docs`)
 - [Integración de WhatsApp y Chatwoot](docs/whatsapp-integration.md)
 - [Visión original de la arquitectura](docs/architecture/vision-original.md)
