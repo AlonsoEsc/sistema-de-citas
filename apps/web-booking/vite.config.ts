@@ -10,7 +10,7 @@ export default defineConfig({
         manualChunks: {
           icons: ["lucide-react"],
           query: ["@tanstack/react-query", "axios"],
-          motion: ["framer-motion"]
+          motion: ["motion"]
         }
       }
     }

@@ -26,6 +26,7 @@ const envSchema = z.object({
   ENCRYPTION_KEY: z.string().min(32),
   OTP_EXPIRY_MINUTES: z.coerce.number().int().min(1).max(30).default(5),
   BOOKING_JWT_EXPIRES_IN: z.string().default("30d"),
+  PRODUCT_NAME: z.string().trim().min(1).default("Agenda de Citas"),
   ADMIN_JWT_EXPIRES_IN: z.string().default("12h"),
   ADMIN_BASE_URL: z.string().url().default("http://localhost:5173"),
   CORS_ORIGINS: z.string().optional(),

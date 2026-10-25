@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { Alert, Box, Button, Container, Paper, Stack, TextField, Typography } from "@mui/material";
-import { motion } from "framer-motion";
+import { useState, type FormEvent } from "react";
+import { PRODUCT_NAME } from "../config/brand";
 import { useAuth } from "../state/auth";
+
+const inputClass =
+  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -12,58 +14,78 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
       setLoading(true);
       setError(null);
       await login({ email, password, tenantSlug });
     } catch {
-      setError("No se pudo iniciar sesión. Revisa credenciales y tenant.");
+      setError("No se pudo iniciar sesión. Revisa tus credenciales y el identificador del negocio.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background:
-          "radial-gradient(circle at 10% 15%, rgba(20,184,166,0.25), transparent 32%), radial-gradient(circle at 90% 85%, rgba(234,88,12,0.22), transparent 40%), #F6F9F8"
-      }}
-    >
-      <Container maxWidth="sm">
-        <Paper
-          component={motion.form}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          onSubmit={submit}
-          sx={{ p: 4, borderRadius: 5 }}
-        >
-          <Typography variant="h4">Panel Administrativo</Typography>
-          <Typography color="text.secondary" sx={{ mt: 1, mb: 3 }}>
-            SaaS de citas para barberías, salones y clínicas.
-          </Typography>
+    <main className="grid min-h-screen place-items-center bg-slate-50 px-4">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-md space-y-5 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"
+      >
+        <header>
+          <p className="text-xs font-semibold uppercase tracking-widest text-indigo-600">{PRODUCT_NAME}</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">Panel administrativo</h1>
+          <p className="mt-1 text-sm text-slate-500">Ingresa para gestionar tu agenda.</p>
+        </header>
 
-          <Stack spacing={2}>
-            {error && <Alert severity="error">{error}</Alert>}
-            <TextField label="Tenant slug" value={tenantSlug} onChange={(e) => setTenantSlug(e.target.value)} />
-            <TextField label="Correo" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <TextField
-              type="password"
-              label="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <Button type="submit" variant="contained" size="large" disabled={loading}>
-              {loading ? "Ingresando..." : "Entrar al sistema"}
-            </Button>
-          </Stack>
-        </Paper>
-      </Container>
-    </Box>
+        {error && (
+          <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">Identificador del negocio</span>
+          <input
+            className={inputClass}
+            value={tenantSlug}
+            onChange={(event) => setTenantSlug(event.target.value)}
+            autoComplete="organization"
+            required
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">Correo</span>
+          <input
+            className={inputClass}
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="username"
+            required
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">Contraseña</span>
+          <input
+            className={inputClass}
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            required
+          />
+        </label>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? "Ingresando..." : "Entrar"}
+        </button>
+      </form>
+    </main>
   );
 }

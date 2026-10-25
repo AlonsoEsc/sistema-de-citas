@@ -8,17 +8,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          mui: ["@mui/material", "@mui/icons-material", "@emotion/react", "@emotion/styled"],
           charts: ["recharts"],
-          icons: ["lucide-react"],
+          icons: ["lucide-react", "@phosphor-icons/react"],
           motion: ["motion"],
-          calendar: [
-            "@fullcalendar/core",
-            "@fullcalendar/daygrid",
-            "@fullcalendar/interaction",
-            "@fullcalendar/react",
-            "@fullcalendar/timegrid"
-          ],
           query: ["@tanstack/react-query", "axios"]
         }
       }

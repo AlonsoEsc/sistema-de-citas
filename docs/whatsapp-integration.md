@@ -54,7 +54,7 @@ either tag.
 ## Connect Evolution
 
 1. Create an Evolution instance using the WhatsApp Cloud API integration.
-2. In Agenda Pro open Settings → WhatsApp.
+2. In the admin panel open Settings → WhatsApp.
 3. Enter Evolution URL, global/instance API key and instance name.
 4. The API validates `connectionState`, stores credentials encrypted and configures
    `MESSAGES_UPSERT`, `MESSAGES_UPDATE`, `SEND_MESSAGE` and `CONNECTION_UPDATE`.

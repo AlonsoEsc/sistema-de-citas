@@ -6,7 +6,6 @@ import Catalogos from "./components/Catalogos";
 import Reportes from "./components/Reportes";
 import Ajustes from "./components/Ajustes";
 import PortalClientes from "./components/PortalClientes";
-import BackendDocs from "./components/BackendDocs";
 import Conversations from "./components/Conversations";
 import UnifiedShell, {
   type AdminTheme,
@@ -30,6 +29,7 @@ import type {
   Service as ApiService,
   Staff,
 } from "../lib/types";
+import { PRODUCT_NAME } from "../config/brand";
 
 type ApiTemplate = {
   id: string;
@@ -60,15 +60,15 @@ const initialIntegration: IntegrationStatus = {
     connected: false,
     phoneNumber: "",
     qrCodeUrl:
-      "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=agenda-pro-whatsapp-auth-placeholder",
+      "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=whatsapp-auth-placeholder",
   },
   googleCalendar: {
     connected: false,
-    syncedCalendars: ["Agenda Pro - Principal"],
+    syncedCalendars: [`${PRODUCT_NAME} - Principal`],
   },
   gmail: {
     connected: false,
-    senderEmail: "notificaciones@agendapro.com",
+    senderEmail: "",
   },
   chatwoot: {
     connected: false,
@@ -271,7 +271,7 @@ function mapIntegrationStatus(
       connected: google?.status === "connected",
       syncedCalendars:
         google?.status === "connected"
-          ? ["Agenda Pro - Principal"]
+          ? [`${PRODUCT_NAME} - Principal`]
           : fallback.googleCalendar.syncedCalendars,
       accountEmail:
         google?.accountEmail ?? fallback.googleCalendar.accountEmail,
@@ -297,14 +297,14 @@ export function ProAdminApp() {
   const canViewReports = can("reports.view");
   const [activeTab, setActiveTab] = useState("conversaciones");
   const [adminTheme, setAdminTheme] = useState<AdminTheme>(() => {
-    const saved = localStorage.getItem("agenda-pro-admin-theme");
+    const saved = localStorage.getItem("admin-theme");
     return saved === "dark" ? "dark" : "light";
   });
   const [integration, setIntegration] =
     useState<IntegrationStatus>(initialIntegration);
 
   useEffect(() => {
-    localStorage.setItem("agenda-pro-admin-theme", adminTheme);
+    localStorage.setItem("admin-theme", adminTheme);
     document.documentElement.style.colorScheme = adminTheme;
   }, [adminTheme]);
 
@@ -806,7 +806,6 @@ export function ProAdminApp() {
             />
           )}
 
-          {activeTab === "backend" && <BackendDocs />}
       </>
     </UnifiedShell>
   );

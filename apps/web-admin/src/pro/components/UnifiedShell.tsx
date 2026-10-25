@@ -5,7 +5,6 @@ import {
   CaretDown,
   ChartBar,
   ChatCircleDots,
-  Code,
   GearSix,
   Globe,
   House,
@@ -16,6 +15,7 @@ import {
   Sun,
 } from "@phosphor-icons/react";
 import type { Appointment } from "../types";
+import { PRODUCT_NAME } from "../../config/brand";
 
 export type AdminTheme = "light" | "dark";
 
@@ -40,7 +40,6 @@ const navItems = [
   { id: "reportes", label: "Reportes", icon: ChartBar },
   { id: "ajustes", label: "Ajustes", icon: GearSix },
   { id: "portal", label: "Portal de clientes", icon: Globe },
-  { id: "backend", label: "Guía backend", icon: Code },
 ];
 
 function dateKey(date: Date) {
@@ -73,7 +72,7 @@ export default function UnifiedShell({
         <button
           className="unified-brand-mark"
           type="button"
-          aria-label="Agenda Pro"
+          aria-label={PRODUCT_NAME}
           onClick={() => setActiveTab("conversaciones")}
         >
           <CalendarBlank size={24} weight="bold" />
@@ -112,7 +111,7 @@ export default function UnifiedShell({
           <div className="unified-wordmark">
             <span><Sparkle size={17} weight="fill" /></span>
             <div>
-              <strong>Agenda Pro</strong>
+              <strong>{PRODUCT_NAME}</strong>
               <small>{tenantName}</small>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Appointment, Professional, Service, ScheduledReport } from '../types';
 import { FileSpreadsheet, FileText, Calendar, Filter, Plus, Trash2, Clock, Check } from 'lucide-react';
+import { PRODUCT_NAME } from "../../config/brand";
 
 interface ReportesProps {
   appointments: Appointment[];
@@ -145,7 +146,7 @@ export default function Reportes({
     printWindow.document.write(`
       <html>
         <head>
-          <title>Reporte de Citas - Agenda Pro</title>
+          <title>Reporte de Citas - ${PRODUCT_NAME}</title>
           <style>
             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; padding: 40px; }
             .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; }
@@ -163,7 +164,7 @@ export default function Reportes({
         <body>
           <div class="header">
             <div>
-              <div class="title">Agenda Pro</div>
+              <div class="title">${PRODUCT_NAME}</div>
               <div style="font-size: 13px; color: #0d9488; font-weight: bold;">Reporte Comercial y Operativo</div>
             </div>
             <div class="meta" style="text-align: right;">
@@ -209,7 +210,7 @@ export default function Reportes({
           </table>
 
           <div style="margin-top: 40px; font-size: 10px; text-align: center; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 10px;">
-            Documento de control administrativo Agenda Pro. Todos los derechos reservados.
+            Documento de control administrativo ${PRODUCT_NAME}. Todos los derechos reservados.
           </div>
 
           <script>

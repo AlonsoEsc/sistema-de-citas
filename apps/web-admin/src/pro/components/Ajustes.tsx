@@ -12,6 +12,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { PRODUCT_NAME } from "../../config/brand";
 
 interface AjustesProps {
   subscription?: {
@@ -116,7 +117,7 @@ export default function Ajustes({
         connected: false,
         phoneNumber: "",
         qrCodeUrl:
-          "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=agenda-pro-whatsapp-auth-placeholder",
+          "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=whatsapp-auth-placeholder",
       },
     });
     showToast("⚠️ WhatsApp desconectado.");
@@ -203,7 +204,7 @@ export default function Ajustes({
           <body>
             <div class="card">
               <div class="logo">Google Calendar Sync</div>
-              <p>Agenda Pro solicita acceso para sincronizar tus citas y gestionar eventos en tu calendario.</p>
+              <p>{PRODUCT_NAME} solicita acceso para sincronizar tus citas y gestionar eventos en tu calendario.</p>
               <div class="scope">
                 ☑️ Ver, editar y eliminar eventos en tus calendarios de Google Calendar.
               </div>
@@ -221,7 +222,7 @@ export default function Ajustes({
             googleCalendar: {
               connected: true,
               syncedCalendars: [
-                "Agenda Pro - Principal",
+                `${PRODUCT_NAME} - Principal`,
                 "Calendario Barbería",
               ],
               accountEmail: "barberstudio.admin@gmail.com",
@@ -240,7 +241,7 @@ export default function Ajustes({
       ...integration,
       googleCalendar: {
         connected: false,
-        syncedCalendars: ["Agenda Pro - Principal"],
+        syncedCalendars: [`${PRODUCT_NAME} - Principal`],
       },
     });
     showToast("⚠️ Sincronización de Google Calendar eliminada.");
@@ -262,7 +263,7 @@ export default function Ajustes({
       ...integration,
       gmail: {
         connected: false,
-        senderEmail: "notificaciones@agendapro.com",
+        senderEmail: "",
       },
     });
     showToast("⚠️ Gmail SMTP desconectado.");

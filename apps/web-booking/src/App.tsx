@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { bookingApi, tenantSlug } from "./lib/api";
 import type { AvailabilityResponse, CustomerAppointment, Service, Staff } from "./lib/types";
+import { PRODUCT_NAME } from "./config/brand";
 
 type BookingView = "auth" | "menu" | "book" | "cancel";
 
@@ -434,7 +435,7 @@ function BookingContent() {
               <Calendar className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">Agenda Pro</h1>
+              <h1 className="text-xl font-bold tracking-tight text-white">{PRODUCT_NAME}</h1>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Portal de Reservas</p>
             </div>
           </div>

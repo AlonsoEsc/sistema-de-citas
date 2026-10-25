@@ -526,7 +526,7 @@ export async function integrationRoutes(app: FastifyInstance) {
       <html>
         <body style="font-family: system-ui; padding: 32px;">
           <h2>Google Calendar conectado</h2>
-          <p>Ya puedes cerrar esta ventana y volver a Agenda Pro.</p>
+          <p>Ya puedes cerrar esta ventana y volver a ${escapeHtml(env.PRODUCT_NAME)}.</p>
         </body>
       </html>
     `);
