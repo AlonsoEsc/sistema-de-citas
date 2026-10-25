@@ -5,8 +5,9 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "build": "echo shared package ok",
-    "lint": "echo no lint",
-    "format": "echo no format"
-  }
+    "build": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "types": "src/index.ts"
 }

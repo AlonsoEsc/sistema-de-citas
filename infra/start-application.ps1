@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
-$projectDirectory = "C:\Users\Besco\OneDrive\Escritorio\DESARROLLOS\SistemasDeCitas"
-$logDirectory = Join-Path $projectDirectory ".codex-logs"
+$projectDirectory = Split-Path -Parent $PSScriptRoot
+$logDirectory = Join-Path $projectDirectory "logs"
 
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 

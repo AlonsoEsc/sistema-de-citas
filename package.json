@@ -16,12 +16,16 @@
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
-    "format": "npm run format --workspaces"
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run typecheck && npm test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "concurrently": "^9.0.1",
     "globals": "^17.7.0",
+    "prettier": "^3.4.2",
     "typescript-eslint": "^8.64.0"
   },
   "overrides": {
