@@ -28,3 +28,9 @@ export const DEFAULT_ROLES: Record<string, PermissionKey[]> = {
   receptionist: [PERMISSIONS.appointmentsManage, PERMISSIONS.customersManage],
   staff: [PERMISSIONS.appointmentsManage],
 };
+
+export const ROLE_LABELS: Record<string, string> = {
+  [OWNER_ROLE]: "Dueño",
+  receptionist: "Recepción",
+  staff: "Personal",
+};

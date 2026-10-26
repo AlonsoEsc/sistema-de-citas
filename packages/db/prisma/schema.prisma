@@ -146,21 +146,23 @@ model TenantSetting {
 }
 
 model User {
-  id               String       @id @default(uuid()) @db.Uuid
-  email            String       @unique
-  fullName         String?
-  passwordHash     String
-  isActive         Boolean      @default(true)
+  id                String       @id @default(uuid()) @db.Uuid
+  email             String       @unique
+  fullName          String?
+  passwordHash      String
+  isActive          Boolean      @default(true)
   /// Operador de la plataforma (panel de superadmin). No pertenece a ningun negocio.
-  isPlatformAdmin  Boolean      @default(false)
-  emailVerifiedAt  DateTime?
-  createdAt        DateTime     @default(now())
-  tenantUsers      TenantUser[]
-  userRoles        UserRole[]
-  tokens           UserToken[]
-  sentInvitations  Invitation[]
-  recordedPayments Payment[]
-  auditLogs        AuditLog[]
+  isPlatformAdmin   Boolean      @default(false)
+  emailVerifiedAt   DateTime?
+  /// Los tokens emitidos antes de este instante dejan de ser validos.
+  passwordChangedAt DateTime?
+  createdAt         DateTime     @default(now())
+  tenantUsers       TenantUser[]
+  userRoles         UserRole[]
+  tokens            UserToken[]
+  sentInvitations   Invitation[]
+  recordedPayments  Payment[]
+  auditLogs         AuditLog[]
 }
 
 /// Tokens de un solo uso para recuperar la contrasena o verificar el correo (se guarda el hash).

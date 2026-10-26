@@ -15,3 +15,30 @@ export const optionalPhoneSchema = z
     "Telefono invalido",
   )
   .optional();
+
+export const timeZoneSchema = z.string().refine((value) => {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}, "Zona horaria invalida");
+
+export const currencySchema = z
+  .string()
+  .regex(/^[A-Z]{3}$/)
+  .refine(
+    (value) => Intl.supportedValuesOf("currency").includes(value),
+    "Moneda invalida",
+  );
+
+/** Politica de contrasenas del panel: minimo 10 caracteres con letras y numeros. */
+export const passwordSchema = z
+  .string()
+  .min(10, "Minimo 10 caracteres")
+  .max(128)
+  .refine(
+    (value) => /[a-zA-Z]/.test(value) && /\d/.test(value),
+    "Debe incluir letras y numeros",
+  );

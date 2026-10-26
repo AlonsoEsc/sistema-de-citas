@@ -1,12 +1,15 @@
+import { INDUSTRY_CODES, industryProfile } from "@citas/shared/industries";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { notFound } from "../../shared/errors.js";
 import { toJsonValue } from "../../shared/json.js";
+import { currencySchema, timeZoneSchema } from "../../shared/schemas.js";
 import { scopeOf } from "../../shared/tenant-scope.js";
+import { recordAudit } from "../audit/audit.service.js";
 import { adminAccess } from "../auth/guards.js";
 import { PERMISSIONS } from "../auth/permissions.js";
-import { loadEntitlements } from "./entitlements.js";
+import { bookingUrlFor } from "../onboarding/onboarding.service.js";
+import { tenantOf } from "./tenant-context.js";
 
 const tags = ["negocio"];
 const security = [{ bearerAuth: [] }];
@@ -17,25 +20,96 @@ const settingsSchema = z.object({
   brandingJson: z.record(z.string(), z.unknown()).optional(),
 });
 
+const profileSchema = z.object({
+  name: z.string().trim().min(2).max(80).optional(),
+  industry: z.enum(INDUSTRY_CODES).optional(),
+  timezone: timeZoneSchema.optional(),
+  currency: currencySchema.optional(),
+  locale: z
+    .string()
+    .regex(/^[a-z]{2}-[A-Z]{2}$/)
+    .optional(),
+});
+
 export async function tenancyRoutes(app: FastifyInstance) {
   const routes = app.withTypeProvider<ZodTypeProvider>();
 
   routes.get(
     "/tenants/me",
-    { preHandler: adminAccess(), schema: { tags, security } },
+    {
+      preHandler: adminAccess(),
+      schema: {
+        tags,
+        security,
+        summary:
+          "Perfil del negocio, vocabulario de su rubro y estado de la cuenta",
+      },
+    },
     async (request) => {
-      const { tenantId, db } = scopeOf(request);
-      const [tenant, entitlements] = await Promise.all([
-        db.tenant.findUnique({
-          where: { id: tenantId },
-          include: { settings: true },
-        }),
-        loadEntitlements(db),
-      ]);
-      if (!tenant) {
-        throw notFound("Negocio no encontrado", "TENANT_NOT_FOUND");
-      }
-      return { tenant, entitlements };
+      const tenant = await tenantOf(request);
+      const settings = await scopeOf(request).db.tenantSetting.findUnique({
+        where: { tenantId: tenant.id },
+      });
+      const industry = industryProfile(tenant.industry);
+      return {
+        tenant: {
+          id: tenant.id,
+          name: tenant.name,
+          slug: tenant.slug,
+          industry: tenant.industry,
+          timezone: tenant.timezone,
+          currency: tenant.currency,
+          locale: tenant.locale,
+          settings,
+        },
+        industry: {
+          label: industry.label,
+          vocabulary: industry.vocabulary,
+          handlesHealthData: industry.handlesHealthData,
+        },
+        bookingUrl: bookingUrlFor(tenant.slug),
+        subscription: {
+          ...tenant.subscription,
+          accessUntil: tenant.subscription.accessUntil?.toISOString() ?? null,
+        },
+        access: tenant.access,
+        entitlements: tenant.entitlements,
+        limits: tenant.limits,
+      };
+    },
+  );
+
+  routes.patch(
+    "/tenants/me",
+    {
+      preHandler: adminAccess(PERMISSIONS.settingsManage),
+      schema: { tags, security, body: profileSchema },
+    },
+    async (request) => {
+      const { db, tenantId } = scopeOf(request);
+      const updated = await db.tenant.update({
+        where: { id: tenantId },
+        data: request.body,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          industry: true,
+          timezone: true,
+          currency: true,
+          locale: true,
+        },
+      });
+      await recordAudit(db, {
+        tenantId,
+        actorUserId: request.auth!.userId,
+        action: "tenant.profile_updated",
+        entityType: "Tenant",
+        entityId: tenantId,
+        metadata: { fields: Object.keys(request.body) },
+        ip: request.ip,
+      });
+      return updated;
     },
   );
 
@@ -63,6 +137,6 @@ export async function tenancyRoutes(app: FastifyInstance) {
   routes.get(
     "/entitlements",
     { preHandler: adminAccess(), schema: { tags, security } },
-    async (request) => loadEntitlements(scopeOf(request).db),
+    async (request) => (await tenantOf(request)).entitlements,
   );
 }

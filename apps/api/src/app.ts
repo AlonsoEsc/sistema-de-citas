@@ -8,6 +8,7 @@ import {
 } from "fastify-type-provider-zod";
 import { randomUUID } from "node:crypto";
 import { apiDocsEnabled, corsOrigins, env, isProduction } from "./config.js";
+import { accountRoutes } from "./modules/account/account.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { billingRoutes } from "./modules/billing/billing.routes.js";
 import { catalogRoutes } from "./modules/catalog/catalog.routes.js";
@@ -16,9 +17,11 @@ import { integrationRoutes } from "./modules/integrations/integrations.routes.js
 import { conversationRoutes } from "./modules/messaging/conversations.routes.js";
 import { webhookRoutes } from "./modules/messaging/webhooks.routes.js";
 import { templateRoutes } from "./modules/notifications/templates.routes.js";
+import { onboardingRoutes } from "./modules/onboarding/onboarding.routes.js";
 import { portalRoutes } from "./modules/portal/portal.routes.js";
 import { reportRoutes } from "./modules/reports/reports.routes.js";
 import { appointmentRoutes } from "./modules/scheduling/appointments.routes.js";
+import { teamRoutes } from "./modules/team/team.routes.js";
 import { tenancyRoutes } from "./modules/tenancy/tenancy.routes.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
 import { registerOpenApi } from "./plugins/openapi.js";
@@ -80,7 +83,10 @@ export async function buildApp(options: BuildAppOptions = {}) {
 
   for (const routes of [
     authRoutes,
+    accountRoutes,
+    onboardingRoutes,
     tenancyRoutes,
+    teamRoutes,
     catalogRoutes,
     customerRoutes,
     appointmentRoutes,

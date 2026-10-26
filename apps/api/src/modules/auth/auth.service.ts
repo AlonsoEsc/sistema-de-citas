@@ -20,7 +20,9 @@ export async function authenticateAdmin(
     where: { slug: credentials.tenantSlug },
   });
   const user = tenant
-    ? await prisma.user.findUnique({ where: { email: credentials.email } })
+    ? await prisma.user.findUnique({
+        where: { email: credentials.email.trim().toLowerCase() },
+      })
     : null;
 
   const passwordMatches = await bcrypt.compare(

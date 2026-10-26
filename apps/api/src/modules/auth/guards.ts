@@ -15,7 +15,7 @@ import { ADMIN_TOKEN_TYPE, type AdminTokenPayload } from "./tokens.js";
  * peticion la identidad (`auth`) y el acceso a datos filtrado por tenant (`scope`).
  */
 export async function requireAuth(request: FastifyRequest) {
-  let payload: Partial<AdminTokenPayload>;
+  let payload: Partial<AdminTokenPayload> & { iat?: number };
   try {
     payload = await request.jwtVerify<AdminTokenPayload>();
   } catch {
@@ -36,7 +36,11 @@ export async function requireAuth(request: FastifyRequest) {
     payload.tenantId,
     payload.userId,
   );
-  if (!access) {
+  // Cambiar o restablecer la contrasena cierra las sesiones abiertas antes.
+  const issuedBeforePasswordChange =
+    access?.passwordChangedAt &&
+    (payload.iat ?? 0) * 1000 < access.passwordChangedAt.getTime() - 1000;
+  if (!access || issuedBeforePasswordChange) {
     throw unauthorized("La sesion ya no es valida", "SESSION_REVOKED");
   }
 

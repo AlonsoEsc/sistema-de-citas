@@ -3,6 +3,7 @@ import { OWNER_ROLE, PERMISSIONS } from "./permissions.js";
 
 export type UserAccess = {
   email: string;
+  passwordChangedAt: Date | null;
   roles: string[];
   permissions: string[];
 };
@@ -53,5 +54,10 @@ export async function loadUserAccess(
         ),
       ];
 
-  return { email: membership.user.email, roles, permissions };
+  return {
+    email: membership.user.email,
+    passwordChangedAt: membership.user.passwordChangedAt,
+    roles,
+    permissions,
+  };
 }
