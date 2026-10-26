@@ -3,10 +3,29 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "main": "src/index.ts",
   "scripts": {
-    "build": "echo shared package ok",
-    "lint": "echo no lint",
-    "format": "echo no format"
+    "build": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./phone": "./src/phone.ts",
+    "./time": "./src/time.ts",
+    "./notifications": "./src/notifications.ts",
+    "./crypto": "./src/crypto.ts",
+    "./integrations": "./src/integrations.ts",
+    "./industries": "./src/industries.ts",
+    "./access": "./src/access.ts",
+    "./reports": "./src/reports.ts",
+    "./billing": "./src/billing.ts",
+    "./legal": "./src/legal.ts"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2"
   }
 }

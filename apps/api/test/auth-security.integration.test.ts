@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import bcrypt from "bcryptjs";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "@citas/db";
 import type { FastifyInstance } from "fastify";
+import { buildApp } from "../src/app.js";
+import { grantSubscription } from "./helpers.js";
 
-// Fuera de development la API nunca debe devolver el OTP en la respuesta.
-process.env.NODE_ENV = "test";
-
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const tenantId = "88888888-8888-4888-8888-888888888888";
 const tenantSlug = "agenda-qa-security";
 const ownerEmail = "owner.security@qa.local";
@@ -60,6 +59,7 @@ test.before(async () => {
       },
     },
   });
+  await grantSubscription(prisma, tenantId);
 
   const appointmentsPermission = await prisma.permission.upsert({
     where: { key: "appointments.manage" },
@@ -89,7 +89,6 @@ test.before(async () => {
     });
   }
 
-  const { buildApp } = await import("../src/app.js");
   app = await buildApp();
 });
 

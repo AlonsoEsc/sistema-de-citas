@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: appointments_saas
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/appointments_saas?schema=public
+      JWT_SECRET: ci-only-secret-not-used-anywhere-else
+      ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run db:deploy
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      # Aparte: con Redis los contadores se comparten entre toda la suite.
+      - name: Limites de intentos compartidos en Redis
+        working-directory: apps/api
+        env:
+          REDIS_URL: redis://localhost:6379
+        run: node --import tsx --import ./test/setup.ts --test test/rate-limit.integration.test.ts
+      - run: npm run build
+      - name: Respaldo y prueba de restauracion
+        run: |
+          mkdir -p backups
+          docker run --rm --network host             -e PGHOST=localhost -e PGUSER=postgres -e PGPASSWORD=postgres             -e PGDATABASE=appointments_saas -e BACKUP_DIR=/backups             -v "$PWD/infra/deploy/backup:/backup:ro" -v "$PWD/backups:/backups"             postgres:16-alpine             sh -c "/bin/sh /backup/backup.sh && /bin/sh /backup/restore-test.sh"
+
+  # Construye las imagenes (sin publicarlas) para detectar a tiempo un Dockerfile roto.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Construir imagenes
+        run: |
+          for target in api worker tools web; do
+            docker buildx build --file infra/docker/Dockerfile --target "$target"               --cache-from type=gha --cache-to type=gha,mode=max .
+          done

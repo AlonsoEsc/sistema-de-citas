@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
-import { processInboundWhatsappMessage } from "../src/services/whatsapp-assistant.js";
+import { createPrismaClient } from "@citas/db";
+import { processInboundWhatsappMessage } from "../src/modules/messaging/assistant/index.js";
+import { grantSubscription } from "./helpers.js";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const tenantId = "77777777-7777-4777-8777-777777777777";
 const phone = "+50371112222";
 const latePhone = "+50373334444";
@@ -74,6 +75,7 @@ test.before(async () => {
       },
     },
   });
+  await grantSubscription(prisma, tenantId);
   const staff = await prisma.staff.create({
     data: {
       tenantId,

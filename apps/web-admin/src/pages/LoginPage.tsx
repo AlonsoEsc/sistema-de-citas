@@ -1,69 +1,91 @@
-import { useState } from "react";
-import { Alert, Box, Button, Container, Paper, Stack, TextField, Typography } from "@mui/material";
-import { motion } from "framer-motion";
+import { useState, type FormEvent } from "react";
+import {
+  Alert,
+  AuthLayout,
+  Field,
+  PrimaryButton,
+  TextLink,
+} from "../components/ui/form";
+import { apiErrorMessage } from "../lib/errors";
 import { useAuth } from "../state/auth";
 
 export function LoginPage() {
   const { login } = useAuth();
   // Las credenciales demo solo se precargan en desarrollo, nunca en el build de produccion.
-  const [email, setEmail] = useState(import.meta.env.DEV ? "admin@demo.com" : "");
-  const [password, setPassword] = useState(import.meta.env.DEV ? "Admin1234!" : "");
-  const [tenantSlug, setTenantSlug] = useState(import.meta.env.DEV ? "demo-barberia" : "");
+  const [email, setEmail] = useState(
+    import.meta.env.DEV ? "admin@demo.com" : "",
+  );
+  const [password, setPassword] = useState(
+    import.meta.env.DEV ? "Admin1234!" : "",
+  );
+  const [tenantSlug, setTenantSlug] = useState(
+    import.meta.env.DEV ? "demo-barberia" : "",
+  );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
       setLoading(true);
       setError(null);
       await login({ email, password, tenantSlug });
-    } catch {
-      setError("No se pudo iniciar sesión. Revisa credenciales y tenant.");
+    } catch (err) {
+      setError(
+        apiErrorMessage(
+          err,
+          "No se pudo iniciar sesión. Revisa tus credenciales y el identificador del negocio.",
+        ),
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background:
-          "radial-gradient(circle at 10% 15%, rgba(20,184,166,0.25), transparent 32%), radial-gradient(circle at 90% 85%, rgba(234,88,12,0.22), transparent 40%), #F6F9F8"
-      }}
+    <AuthLayout
+      title="Panel administrativo"
+      subtitle="Ingresa para gestionar tu agenda."
+      footer={
+        <>
+          ¿Aún no tienes cuenta?{" "}
+          <TextLink to="/registro">Prueba 14 días gratis</TextLink>
+        </>
+      }
     >
-      <Container maxWidth="sm">
-        <Paper
-          component={motion.form}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          onSubmit={submit}
-          sx={{ p: 4, borderRadius: 5 }}
-        >
-          <Typography variant="h4">Panel Administrativo</Typography>
-          <Typography color="text.secondary" sx={{ mt: 1, mb: 3 }}>
-            SaaS de citas para barberías, salones y clínicas.
-          </Typography>
-
-          <Stack spacing={2}>
-            {error && <Alert severity="error">{error}</Alert>}
-            <TextField label="Tenant slug" value={tenantSlug} onChange={(e) => setTenantSlug(e.target.value)} />
-            <TextField label="Correo" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <TextField
-              type="password"
-              label="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <Button type="submit" variant="contained" size="large" disabled={loading}>
-              {loading ? "Ingresando..." : "Entrar al sistema"}
-            </Button>
-          </Stack>
-        </Paper>
-      </Container>
-    </Box>
+      <form onSubmit={submit} className="space-y-4">
+        {error && <Alert tone="error">{error}</Alert>}
+        <Field
+          label="Identificador del negocio"
+          hint="Es la última parte de tu enlace de reservas."
+          value={tenantSlug}
+          onChange={(event) =>
+            setTenantSlug(event.target.value.trim().toLowerCase())
+          }
+          autoComplete="organization"
+          required
+        />
+        <Field
+          label="Correo"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          autoComplete="username"
+          required
+        />
+        <Field
+          label="Contraseña"
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          autoComplete="current-password"
+          required
+        />
+        <PrimaryButton loading={loading}>Entrar</PrimaryButton>
+        <p className="text-center text-sm">
+          <TextLink to="/recuperar">¿Olvidaste tu contraseña?</TextLink>
+        </p>
+      </form>
+    </AuthLayout>
   );
 }

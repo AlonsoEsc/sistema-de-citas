@@ -1,0 +1,164 @@
+# Despliegue en un VPS con Docker. Uso (ver docs/operations.md):
+#   cp .env.example .env   # y completar
+#   docker compose pull    # o `docker compose build` para construir en el servidor
+#   docker compose up -d
+#
+# Postgres no publica puertos: solo lo alcanzan los servicios de esta red. Caddy es el
+# unico servicio expuesto (80/443) y obtiene los certificados HTTPS.
+name: citas
+
+x-image: &image
+  context: ../..
+  dockerfile: infra/docker/Dockerfile
+  args:
+    APP_VERSION: ${IMAGE_TAG:-local}
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+  APP_VERSION: ${IMAGE_TAG:-local}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  SENTRY_ENVIRONMENT: ${DEPLOY_ENVIRONMENT:-production}
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    shm_size: 256mb
+
+  # Aplica las migraciones pendientes y termina; api y worker esperan a que acabe bien.
+  migrate:
+    image: ${IMAGE_PREFIX:-citas}/tools:${IMAGE_TAG:-local}
+    build:
+      <<: *image
+      target: tools
+    environment:
+      <<: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: ${IMAGE_PREFIX:-citas}/api:${IMAGE_TAG:-local}
+    build:
+      <<: *image
+      target: api
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      PORT: 4000
+      TRUST_PROXY: "1"
+      # Solo hace falta con varias instancias de la API (ver docs/operations.md).
+      REDIS_URL: ${REDIS_URL:-}
+      JWT_SECRET: ${JWT_SECRET}
+      PRODUCT_NAME: ${PRODUCT_NAME:-Agenda de Citas}
+      ADMIN_BASE_URL: https://${ADMIN_SITE}
+      PUBLIC_BOOKING_BASE_URL: https://${BOOKING_SITE}
+      API_PUBLIC_BASE_URL: https://${API_SITE}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: https://${API_SITE}/integrations/google/callback
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    image: ${IMAGE_PREFIX:-citas}/worker:${IMAGE_TAG:-local}
+    build:
+      <<: *image
+      target: worker
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      WORKER_SEND_MODE: ${WORKER_SEND_MODE:-live}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_FROM_NAME: ${PRODUCT_NAME:-Agenda de Citas}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_SMS_FROM: ${TWILIO_SMS_FROM:-}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    # El panel y el portal llevan los dominios incrustados: su imagen es propia de cada
+    # entorno (staging, produccion), por eso tiene su propia etiqueta.
+    image: ${IMAGE_PREFIX:-citas}/web:${WEB_IMAGE_TAG:-local}
+    build:
+      <<: *image
+      target: web
+      args:
+        APP_VERSION: ${IMAGE_TAG:-local}
+        VITE_API_URL: https://${API_SITE}
+        VITE_PRODUCT_NAME: ${PRODUCT_NAME:-Agenda de Citas}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+        VITE_FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+        VITE_ADMIN_URL: https://${ADMIN_SITE}
+        VITE_LEGAL_NAME: ${LEGAL_NAME:-}
+        VITE_LEGAL_EMAIL: ${LEGAL_EMAIL:-}
+        VITE_LEGAL_ADDRESS: ${LEGAL_ADDRESS:-}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL}
+      ADMIN_SITE: ${ADMIN_SITE}
+      BOOKING_SITE: ${BOOKING_SITE}
+      API_SITE: ${API_SITE}
+      API_ORIGIN: https://${API_SITE}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+  # Respaldo diario con pg_dump, retencion configurable y prueba semanal de restauracion.
+  backup:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/backup/entrypoint.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 3 * * *}
+      RESTORE_TEST_SCHEDULE: ${RESTORE_TEST_SCHEDULE:-0 4 * * 0}
+      TZ: ${TZ:-America/El_Salvador}
+    volumes:
+      - ./backup:/backup:ro
+      - ${BACKUP_HOST_DIR:-./backups}:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

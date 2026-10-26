@@ -1,7 +1,9 @@
+# Arranca el entorno de desarrollo (`npm run dev`) en segundo plano si la API no esta
+# corriendo. Pensado para el inicio de sesion de Windows; ver README.
 $ErrorActionPreference = "Stop"
 
-$projectDirectory = "C:\Users\Besco\OneDrive\Escritorio\DESARROLLOS\SistemasDeCitas"
-$logDirectory = Join-Path $projectDirectory ".codex-logs"
+$projectDirectory = Split-Path -Parent $PSScriptRoot
+$logDirectory = Join-Path $projectDirectory "logs"
 
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 
