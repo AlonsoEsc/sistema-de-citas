@@ -49,20 +49,33 @@ Pendiente de esta fase:
 
 - Pasarela de cobro recurrente (Wompi u otra): el modelo ya separa `provider` y
   `externalId`; falta el webhook de pagos y el cobro automático.
-- Pantallas del panel para equipo, consumo del plan y cambio de contraseña: la API existe
-  (`/team`, `/billing/usage`, `/auth/password/change`), la interfaz llega en la fase 3.
 - Páginas públicas de términos y política de privacidad (el registro ya exige aceptarlas).
 
-## Fase 3: frontend
+## Fase 3: frontend ✅
 
-- Rutas reales por sección y `ProAdminApp` dividido por funcionalidad (el enrutador ya
-  existe para cuenta y plataforma).
-- Vocabulario del rubro en todo el panel y el portal (`/tenants/me` y `/profile` ya lo
-  entregan).
-- Una sola librería de iconos y componentes base propios.
-- Estados de carga, vacío y error en todas las pantallas.
-- Retirar las simulaciones restantes (portal de clientes, conexión de WhatsApp,
-  avatares de muestra).
+- Panel reconstruido por funcionalidad (`apps/web-admin/src/features`), una ruta por
+  sección y carga diferida por pantalla. Se retiró `ProAdminApp` y su CSS con `!important`.
+- Tokens de diseño en `index.css` (modo claro/oscuro con `data-theme`) y kit de UI propio:
+  botones, tarjetas, diálogos nativos, avisos, pestañas, estados de carga, vacío y error.
+- Fechas, montos y vocabulario del rubro del negocio en todo el panel y el portal.
+- Agenda semanal/diaria con citas ubicadas por minuto y carriles para citas simultáneas;
+  crear, reprogramar, cambiar estado y eliminar. Pide solo el rango visible.
+- Editor de horario semanal con descansos (antes no existía y un negocio nuevo no podía
+  terminar de configurarse).
+- Clientes con borrado de datos personales (anonimiza si hay citas).
+- Avisos activables por canal (el código de acceso es obligatorio); reportes con gráfica
+  por día, desglose por profesional y servicio, exportación CSV y reportes programados.
+- Integraciones reales (Evolution, Chatwoot, Google Calendar), usuarios, plan y consumo,
+  cambio de contraseña, portal con enlace y código QR generado en el navegador.
+- Portal de reservas dividido por componentes: acceso por código, “cualquier profesional”,
+  días reservables según la política del negocio, mis citas y cancelación.
+- Se retiraron las simulaciones (QR falso de WhatsApp, conversaciones y fotos de muestra,
+  portal simulado, “WhatsApp pausado”).
+
+Pendiente de esta fase:
+
+- Responder conversaciones desde el panel (hoy se responde en WhatsApp o Chatwoot).
+- Personalización visual del portal por negocio (logo y color).
 
 ## Fase 4: operación y legal (en paralelo)
 

@@ -47,7 +47,7 @@ export function PortalPage() {
         </h1>
         <p className="mt-1 text-sm text-ink-muted">
           Tus {terms.customers.toLowerCase()} eligen{" "}
-          {terms.service.toLowerCase()}, profesional y horario, y confirman con
+          {terms.services.toLowerCase()}, profesional y horario, y confirman con
           un código que reciben por WhatsApp o SMS.
         </p>
       </header>

@@ -124,6 +124,7 @@ export async function portalRoutes(app: FastifyInstance) {
                 timezone: z.string(),
                 currency: z.string(),
                 locale: z.string(),
+                bookingWindowDays: z.number(),
                 bookingOpen: z.boolean(),
               }),
             },
@@ -139,6 +140,7 @@ export async function portalRoutes(app: FastifyInstance) {
             timezone: tenant.timezone,
             currency: tenant.currency,
             locale: tenant.locale,
+            bookingWindowDays: tenant.bookingWindowDays,
             bookingOpen: tenant.access === "full",
           };
         },

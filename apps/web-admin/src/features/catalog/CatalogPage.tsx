@@ -290,7 +290,7 @@ function ServiceDialog({
       title={
         service
           ? `Editar ${terms.service.toLowerCase()}`
-          : `Nuevo ${terms.service.toLowerCase()}`
+          : `Agregar ${terms.service.toLowerCase()}`
       }
       footer={
         <>
@@ -375,7 +375,7 @@ function ServicesSection({ canManage }: { canManage: boolean }) {
             icon={<Plus className="size-4" />}
             onClick={() => setEditing({ service: null })}
           >
-            Nuevo {terms.service.toLowerCase()}
+            Agregar {terms.service.toLowerCase()}
           </Button>
         )}
       </div>
@@ -392,7 +392,8 @@ function ServicesSection({ canManage }: { canManage: boolean }) {
       ) : (services.data ?? []).length === 0 ? (
         <EmptyState
           icon={<Scissors className="size-5" />}
-          title={`Agrega tu primer ${terms.service.toLowerCase()}`}
+          title={`Aún no hay ${terms.services.toLowerCase()}`}
+          description="Agrega lo que tus clientes pueden reservar, con su duración y precio."
         />
       ) : (
         <ul className="divide-y divide-line">

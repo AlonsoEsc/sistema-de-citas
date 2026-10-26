@@ -128,7 +128,7 @@ export function NewAppointmentDialog({
       return;
     }
     if (serviceIds.length === 0) {
-      setProblem(`Elige al menos un ${terms.service.toLowerCase()}.`);
+      setProblem(`Marca qué ${terms.services.toLowerCase()} incluye la cita.`);
       return;
     }
     setProblem("");
@@ -244,7 +244,7 @@ export function NewAppointmentDialog({
           </legend>
           {activeServices.length === 0 ? (
             <p className="text-sm text-ink-muted">
-              Aún no hay {terms.services.toLowerCase()} activos.
+              No hay {terms.services.toLowerCase()} disponibles para reservar.
             </p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
