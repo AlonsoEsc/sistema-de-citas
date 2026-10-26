@@ -18,6 +18,7 @@ import { conversationRoutes } from "./modules/messaging/conversations.routes.js"
 import { webhookRoutes } from "./modules/messaging/webhooks.routes.js";
 import { templateRoutes } from "./modules/notifications/templates.routes.js";
 import { onboardingRoutes } from "./modules/onboarding/onboarding.routes.js";
+import { platformRoutes } from "./modules/platform/platform.routes.js";
 import { portalRoutes } from "./modules/portal/portal.routes.js";
 import { reportRoutes } from "./modules/reports/reports.routes.js";
 import { appointmentRoutes } from "./modules/scheduling/appointments.routes.js";
@@ -97,6 +98,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
     integrationRoutes,
     conversationRoutes,
     webhookRoutes,
+    platformRoutes,
   ]) {
     await app.register(routes);
   }

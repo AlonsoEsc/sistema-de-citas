@@ -17,6 +17,8 @@ declare module "fastify" {
     customerAuth?: BookingCustomerTokenPayload;
     /** Contexto del negocio de la peticion (se carga una vez y se reutiliza). */
     tenant?: TenantContext;
+    /** Superadmin autenticado en el panel de la plataforma. */
+    platformAdmin?: { userId: string; email: string };
     /** Acceso a datos filtrado por el negocio de la peticion. */
     scope?: TenantScope;
   }

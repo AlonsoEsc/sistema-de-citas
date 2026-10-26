@@ -23,7 +23,8 @@
     "db:generate": "npm --workspace packages/db run generate",
     "db:migrate": "npm --workspace packages/db run migrate:dev",
     "db:deploy": "npm --workspace packages/db run migrate:deploy",
-    "db:seed": "npm --workspace packages/db run seed"
+    "db:seed": "npm --workspace packages/db run seed",
+    "platform:admin": "npm --workspace packages/db run platform:admin --"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
