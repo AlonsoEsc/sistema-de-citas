@@ -9,8 +9,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           charts: ["recharts"],
-          icons: ["lucide-react", "@phosphor-icons/react"],
-          motion: ["motion"],
           query: ["@tanstack/react-query", "axios"],
         },
       },

@@ -138,7 +138,7 @@ export function SignupPage() {
           minLength={10}
           required
         />
-        <label className="flex items-start gap-2 text-sm text-slate-600">
+        <label className="flex items-start gap-2 text-sm text-ink-muted">
           <input
             type="checkbox"
             className="mt-1"

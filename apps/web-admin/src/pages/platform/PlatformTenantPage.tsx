@@ -38,8 +38,8 @@ const METHOD_LABELS: Record<string, string> = {
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+    <section className="space-y-3 rounded-2xl border border-line bg-surface p-5">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
         {title}
       </h2>
       {children}
@@ -60,8 +60,8 @@ function ActionButton({
 }) {
   const styles =
     tone === "danger"
-      ? "bg-red-600 hover:bg-red-700"
-      : "bg-indigo-600 hover:bg-indigo-700";
+      ? "bg-danger hover:opacity-90"
+      : "bg-primary hover:bg-primary-hover";
   return (
     <button
       type={props.type ?? "submit"}
@@ -152,7 +152,7 @@ export function PlatformTenantPage() {
     );
   }
   if (!detail.data) {
-    return <p className="text-sm text-slate-500">Cargando…</p>;
+    return <p className="text-sm text-ink-muted">Cargando…</p>;
   }
   const tenant = detail.data;
   const suspended = tenant.status === "suspended";
@@ -166,8 +166,8 @@ export function PlatformTenantPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">{tenant.name}</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-xl font-bold text-ink">{tenant.name}</h1>
+          <p className="text-sm text-ink-muted">
             /{tenant.slug} · {tenant.owner?.email ?? "sin dueño"} · alta{" "}
             {formatDate(tenant.createdAt)}
           </p>
@@ -183,19 +183,19 @@ export function PlatformTenantPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         <Card title="Suscripción">
           <dl className="grid grid-cols-2 gap-2 text-sm">
-            <dt className="text-slate-500">Plan</dt>
+            <dt className="text-ink-muted">Plan</dt>
             <dd className="font-medium">
               {tenant.subscriptionDetail
                 ? `${tenant.subscriptionDetail.planName} · ${formatMoney(tenant.subscriptionDetail.planPriceCents, "USD")}/mes`
                 : "—"}
             </dd>
-            <dt className="text-slate-500">Acceso hasta</dt>
+            <dt className="text-ink-muted">Acceso hasta</dt>
             <dd className="font-medium">
               {formatDate(tenant.subscription.accessUntil)}
             </dd>
-            <dt className="text-slate-500">Personal activo</dt>
+            <dt className="text-ink-muted">Personal activo</dt>
             <dd className="font-medium">{tenant.activeStaff}</dd>
-            <dt className="text-slate-500">Citas</dt>
+            <dt className="text-ink-muted">Citas</dt>
             <dd className="font-medium">{tenant.appointments}</dd>
           </dl>
           <SelectField
@@ -295,12 +295,12 @@ export function PlatformTenantPage() {
 
       <Card title="Pagos">
         {tenant.payments.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-ink-muted">
             Aún no hay pagos registrados.
           </p>
         ) : (
           <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase text-slate-500">
+            <thead className="text-xs uppercase text-ink-muted">
               <tr>
                 <th className="py-2">Fecha</th>
                 <th className="py-2">Monto</th>
@@ -310,7 +310,7 @@ export function PlatformTenantPage() {
                 <th className="py-2">Registró</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line">
               {tenant.payments.map((row) => (
                 <tr key={row.id}>
                   <td className="py-2">{formatDate(row.paidAt)}</td>
@@ -322,7 +322,7 @@ export function PlatformTenantPage() {
                   </td>
                   <td className="py-2">{row.reference ?? "—"}</td>
                   <td className="py-2">{formatDate(row.periodEnd)}</td>
-                  <td className="py-2 text-slate-500">
+                  <td className="py-2 text-ink-muted">
                     {row.recordedBy ?? "—"}
                   </td>
                 </tr>
@@ -337,13 +337,13 @@ export function PlatformTenantPage() {
           {tenant.auditLog.map((entry, index) => (
             <li
               key={index}
-              className="flex justify-between gap-3 text-slate-600"
+              className="flex justify-between gap-3 text-ink-muted"
             >
               <span>
-                <code className="text-xs text-slate-500">{entry.action}</code>
+                <code className="text-xs text-ink-muted">{entry.action}</code>
                 {entry.actor && <span className="ml-2">{entry.actor}</span>}
               </span>
-              <span className="shrink-0 text-xs text-slate-400">
+              <span className="shrink-0 text-xs text-ink-muted">
                 {formatDate(entry.createdAt)}
               </span>
             </li>

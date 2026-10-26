@@ -103,22 +103,22 @@ export function PlatformApp() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-surface-muted">
+      <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <button
             type="button"
             onClick={() => navigate("/plataforma")}
-            className="text-sm font-bold text-slate-900"
+            className="text-sm font-bold text-ink"
           >
             Plataforma
           </button>
-          <div className="flex items-center gap-4 text-sm text-slate-500">
+          <div className="flex items-center gap-4 text-sm text-ink-muted">
             <span>{session.user.email}</span>
             <button
               type="button"
               onClick={logout}
-              className="font-medium text-indigo-600 hover:text-indigo-700"
+              className="font-medium text-primary hover:text-primary-hover"
             >
               Salir
             </button>

@@ -1,18 +1,8 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api";
-
-type TenantMe = {
-  bookingUrl: string;
-  access: "full" | "read_only";
-  subscription: {
-    state: "trialing" | "active" | "past_due" | "expired" | "canceled";
-    accessUntil: string | null;
-  };
-};
-
-type Onboarding = {
-  steps: Array<{ key: string; done: boolean }>;
-};
+import { cx } from "../lib/cx";
+import { useOnboarding } from "../features/overview/api";
+import { useTenant } from "../state/tenant";
 
 const DAY_MS = 86_400_000;
 
@@ -22,42 +12,38 @@ function daysUntil(date: string | null) {
     : 0;
 }
 
+const tones = {
+  info: "border-primary/25 bg-primary-soft text-ink",
+  warning: "border-warning/30 bg-warning-soft text-ink",
+  danger: "border-danger/30 bg-danger-soft text-ink",
+};
+
 /**
  * Estado de la cuenta visible en todo el panel: dias de prueba, cuenta en solo lectura y
  * correo sin verificar. Explica por que una accion puede quedar bloqueada.
  */
 export function AccountBanner() {
-  const me = useQuery({
-    queryKey: ["tenant-me"],
-    queryFn: async () => (await api.get<TenantMe>("/tenants/me")).data,
-  });
-  const onboarding = useQuery({
-    queryKey: ["onboarding"],
-    queryFn: async () => (await api.get<Onboarding>("/onboarding")).data,
-  });
+  const { subscription, readOnly } = useTenant();
+  const onboarding = useOnboarding();
   const resend = useMutation({
     mutationFn: async () => api.post("/auth/email/resend"),
   });
 
-  if (!me.data) {
-    return null;
-  }
-  const { subscription, access } = me.data;
   const emailPending = onboarding.data?.steps.some(
     (step) => step.key === "verify_email" && !step.done,
   );
 
-  const notices: Array<{ tone: "info" | "warning" | "danger"; text: string }> =
-    [];
-  if (access === "read_only") {
+  const notices: Array<{ tone: keyof typeof tones; text: string }> = [];
+  if (readOnly) {
     notices.push({
       tone: "danger",
       text: "Tu prueba o suscripción venció. El panel está en modo consulta y tu portal no recibe reservas. Escríbenos para renovar tu plan.",
     });
   } else if (subscription.state === "trialing") {
+    const days = daysUntil(subscription.accessUntil);
     notices.push({
       tone: "info",
-      text: `Te quedan ${daysUntil(subscription.accessUntil)} días de prueba gratis. Tu enlace de reservas: ${me.data.bookingUrl}`,
+      text: `Te ${days === 1 ? "queda 1 día" : `quedan ${days} días`} de prueba gratis.`,
     });
   } else if (subscription.state === "past_due") {
     notices.push({
@@ -66,31 +52,37 @@ export function AccountBanner() {
     });
   }
 
-  const styles = {
-    info: "border-indigo-200 bg-indigo-50 text-indigo-800",
-    warning: "border-amber-200 bg-amber-50 text-amber-800",
-    danger: "border-red-200 bg-red-50 text-red-800",
-  };
+  if (notices.length === 0 && !emailPending) {
+    return null;
+  }
 
   return (
-    <div className="mb-4 space-y-2">
+    <div className="mb-6 space-y-2">
       {notices.map((notice) => (
         <p
           key={notice.text}
           role="status"
-          className={`rounded-2xl border px-4 py-3 text-sm ${styles[notice.tone]}`}
+          className={cx(
+            "rounded-xl border px-4 py-2.5 text-sm",
+            tones[notice.tone],
+          )}
         >
           {notice.text}
         </p>
       ))}
       {emailPending && (
-        <p className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <p
+          className={cx(
+            "flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-2.5 text-sm",
+            tones.warning,
+          )}
+        >
           <span>Confirma tu correo para proteger tu cuenta.</span>
           <button
             type="button"
             disabled={resend.isPending || resend.isSuccess}
             onClick={() => resend.mutate()}
-            className="font-semibold underline disabled:no-underline disabled:opacity-60"
+            className="font-semibold text-primary underline disabled:no-underline disabled:opacity-60"
           >
             {resend.isSuccess ? "Enlace enviado" : "Reenviar enlace"}
           </button>

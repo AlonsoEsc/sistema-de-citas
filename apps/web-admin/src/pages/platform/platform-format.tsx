@@ -1,12 +1,15 @@
 const STATE_LABELS: Record<string, { label: string; className: string }> = {
-  trialing: { label: "En prueba", className: "bg-indigo-50 text-indigo-700" },
-  active: { label: "Activa", className: "bg-emerald-50 text-emerald-700" },
+  trialing: { label: "En prueba", className: "bg-primary-soft text-primary" },
+  active: { label: "Activa", className: "bg-success-soft text-success" },
   past_due: {
     label: "Pago pendiente",
-    className: "bg-amber-50 text-amber-700",
+    className: "bg-warning-soft text-warning",
   },
-  expired: { label: "Vencida", className: "bg-red-50 text-red-700" },
-  canceled: { label: "Cancelada", className: "bg-slate-100 text-slate-600" },
+  expired: { label: "Vencida", className: "bg-danger-soft text-danger" },
+  canceled: {
+    label: "Cancelada",
+    className: "bg-surface-muted text-ink-muted",
+  },
 };
 
 export function SubscriptionBadge({
@@ -17,10 +20,10 @@ export function SubscriptionBadge({
   suspended?: boolean;
 }) {
   const badge = suspended
-    ? { label: "Suspendido", className: "bg-red-100 text-red-800" }
+    ? { label: "Suspendido", className: "bg-danger-soft text-danger" }
     : (STATE_LABELS[state] ?? {
         label: state,
-        className: "bg-slate-100 text-slate-600",
+        className: "bg-surface-muted text-ink-muted",
       });
   return (
     <span
