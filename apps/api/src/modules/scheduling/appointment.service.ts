@@ -192,7 +192,7 @@ export async function createAppointment(
 
     await queueAppointmentNotifications(
       tx,
-      tenant.timezone,
+      tenant,
       appointment,
       APPOINTMENT_EVENTS.created,
       { channels: input.notificationChannels },
@@ -260,7 +260,7 @@ export async function rescheduleAppointment(
     });
     await queueAppointmentNotifications(
       tx,
-      tenant.timezone,
+      tenant,
       updated,
       APPOINTMENT_EVENTS.confirmed,
       {
@@ -315,7 +315,7 @@ export async function cancelAppointmentByCustomer(
     });
     await queueAppointmentNotifications(
       { tenantId: scope.tenantId, db },
-      tenant.timezone,
+      tenant,
       updated,
       APPOINTMENT_EVENTS.cancelledByCustomer,
       {
@@ -356,7 +356,7 @@ export async function updateAppointmentStatus(
     if (event && options.notify !== false) {
       await queueAppointmentNotifications(
         { tenantId: scope.tenantId, db },
-        tenant.timezone,
+        tenant,
         updated,
         event,
         {
@@ -412,7 +412,7 @@ export async function queueTestNotification(
   }
   const rows = await queueAppointmentNotifications(
     scope,
-    tenant.timezone,
+    tenant,
     appointment,
     APPOINTMENT_EVENTS.manualTest,
     { channels, idempotencySuffix: new Date().toISOString() },

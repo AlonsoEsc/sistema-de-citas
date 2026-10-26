@@ -1,5 +1,7 @@
+import { forbidden } from "../../shared/errors.js";
 import { notFoundIfMissing } from "../../shared/prisma-errors.js";
 import type { TenantScope } from "../../shared/tenant-scope.js";
+import type { TenantContext } from "../tenancy/tenant-context.js";
 import type {
   ScheduleInput,
   ServiceInput,
@@ -15,20 +17,47 @@ export function listStaff({ db }: TenantScope) {
   return db.staff.findMany({ orderBy: { displayName: "asc" } });
 }
 
-export function createStaff({ db, tenantId }: TenantScope, input: StaffInput) {
-  return db.staff.create({
-    data: { tenantId, ...input, active: input.active ?? true },
+/** El plan limita cuantos profesionales activos puede tener el negocio. */
+async function assertStaffSlotAvailable(
+  { db }: TenantScope,
+  tenant: Pick<TenantContext, "limits">,
+) {
+  const active = await db.staff.count({ where: { active: true } });
+  if (active >= tenant.limits.maxStaff) {
+    throw forbidden(
+      `Tu plan permite ${tenant.limits.maxStaff} profesionales activos. Cambia de plan para agregar mas.`,
+      "PLAN_LIMIT_REACHED",
+    );
+  }
+}
+
+export async function createStaff(
+  scope: TenantScope,
+  tenant: Pick<TenantContext, "limits">,
+  input: StaffInput,
+) {
+  const active = input.active ?? true;
+  if (active) {
+    await assertStaffSlotAvailable(scope, tenant);
+  }
+  return scope.db.staff.create({
+    data: { tenantId: scope.tenantId, ...input, active },
   });
 }
 
-export function updateStaff(
-  { db }: TenantScope,
+export async function updateStaff(
+  scope: TenantScope,
+  tenant: Pick<TenantContext, "limits">,
   staffId: string,
   input: Partial<StaffInput>,
 ) {
-  return db.staff
-    .update({ where: { id: staffId }, data: input })
+  const current = await scope.db.staff
+    .findUniqueOrThrow({ where: { id: staffId } })
     .catch(notFoundIfMissing("Profesional no encontrado", "STAFF_NOT_FOUND"));
+  if (input.active && !current.active) {
+    await assertStaffSlotAvailable(scope, tenant);
+  }
+  return scope.db.staff.update({ where: { id: staffId }, data: input });
 }
 
 export function getStaffSchedule({ db }: TenantScope, staffId: string) {

@@ -60,6 +60,12 @@ export function calendarDateIn(instant: Date, timeZone: string) {
   return dayjs(instant).tz(timeZone).format("YYYY-MM-DD");
 }
 
+/** Primer instante del mes en curso en la zona del negocio. */
+export function startOfMonthIn(timeZone: string, now = new Date()) {
+  const today = todayIn(timeZone, now);
+  return zonedDayRange(`${today.slice(0, 7)}-01`, timeZone).start;
+}
+
 export function todayIn(timeZone: string, now = new Date()) {
   return calendarDateIn(now, timeZone);
 }

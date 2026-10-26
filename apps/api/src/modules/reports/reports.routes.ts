@@ -7,7 +7,7 @@ import { idParamsSchema } from "../../shared/schemas.js";
 import { scopeOf } from "../../shared/tenant-scope.js";
 import { adminAccess } from "../auth/guards.js";
 import { PERMISSIONS } from "../auth/permissions.js";
-import { loadTenantContext } from "../tenancy/tenant-context.js";
+import { tenantOf } from "../tenancy/tenant-context.js";
 import { currentMonthRange, getOverview } from "./reports.service.js";
 
 const tags = ["reportes"];
@@ -74,9 +74,7 @@ export async function reportRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const scope = scopeOf(request);
-      const defaults = currentMonthRange(
-        await loadTenantContext(scope.db, scope.tenantId),
-      );
+      const defaults = currentMonthRange(await tenantOf(request));
       return getOverview(scope, {
         from: request.query.from ? new Date(request.query.from) : defaults.from,
         to: request.query.to ? new Date(request.query.to) : defaults.to,

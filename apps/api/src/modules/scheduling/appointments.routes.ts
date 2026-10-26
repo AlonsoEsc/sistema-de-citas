@@ -6,7 +6,7 @@ import { idParamsSchema, optionalPhoneSchema } from "../../shared/schemas.js";
 import { scopeOf } from "../../shared/tenant-scope.js";
 import { adminAccess } from "../auth/guards.js";
 import { PERMISSIONS } from "../auth/permissions.js";
-import { loadTenantContext } from "../tenancy/tenant-context.js";
+import { tenantOf } from "../tenancy/tenant-context.js";
 import * as appointments from "./appointment.service.js";
 
 const tags = ["citas"];
@@ -91,7 +91,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const scope = scopeOf(request);
-      const tenant = await loadTenantContext(scope.db, scope.tenantId);
+      const tenant = await tenantOf(request);
       return appointments.createAppointment(scope, tenant, {
         ...request.body,
         source: "admin",
@@ -117,7 +117,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const scope = scopeOf(request);
-      const tenant = await loadTenantContext(scope.db, scope.tenantId);
+      const tenant = await tenantOf(request);
       return appointments.updateAppointmentStatus(
         scope,
         tenant,
@@ -141,7 +141,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const scope = scopeOf(request);
-      const tenant = await loadTenantContext(scope.db, scope.tenantId);
+      const tenant = await tenantOf(request);
       return appointments.rescheduleAppointment(
         scope,
         tenant,
@@ -176,7 +176,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const scope = scopeOf(request);
-      const tenant = await loadTenantContext(scope.db, scope.tenantId);
+      const tenant = await tenantOf(request);
       return appointments.queueTestNotification(
         scope,
         tenant,

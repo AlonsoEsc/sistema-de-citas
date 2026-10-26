@@ -1,5 +1,10 @@
 import type { FastifyRequest } from "fastify";
-import { forbidden, unauthorized } from "../../shared/errors.js";
+import {
+  forbidden,
+  paymentRequired,
+  unauthorized,
+} from "../../shared/errors.js";
+import { tenantOf } from "../tenancy/tenant-context.js";
 import { tenantScope } from "../../shared/tenant-scope.js";
 import { loadUserAccess } from "./access.js";
 import type { PermissionKey } from "./permissions.js";
@@ -59,9 +64,36 @@ export function requirePermission(permission: PermissionKey) {
   };
 }
 
-/** preHandler de rutas de administracion: autenticacion y, opcionalmente, un permiso. */
+const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * Con la prueba o el pago vencidos el panel queda en solo lectura: se puede consultar y
+ * exportar, pero no crear ni modificar. Una cuenta suspendida tampoco puede escribir.
+ */
+export async function requireWritableAccount(request: FastifyRequest) {
+  if (READ_METHODS.has(request.method)) {
+    return;
+  }
+  const tenant = await tenantOf(request);
+  if (tenant.suspended) {
+    throw forbidden(
+      "La cuenta esta suspendida. Contacta a soporte.",
+      "ACCOUNT_SUSPENDED",
+    );
+  }
+  if (tenant.access !== "full") {
+    throw paymentRequired(
+      "Tu prueba o suscripcion vencio. Renueva el plan para seguir haciendo cambios.",
+      "SUBSCRIPTION_INACTIVE",
+    );
+  }
+}
+
+/** preHandler de rutas del panel: autenticacion, permiso opcional y cuenta habilitada. */
 export function adminAccess(permission?: PermissionKey) {
-  return permission
-    ? [requireAuth, requirePermission(permission)]
-    : [requireAuth];
+  return [
+    requireAuth,
+    ...(permission ? [requirePermission(permission)] : []),
+    requireWritableAccount,
+  ];
 }

@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { scopeOf } from "../../shared/tenant-scope.js";
+import { tenantOf } from "../tenancy/tenant-context.js";
 import { ACTIVE_APPOINTMENT_STATUSES } from "../scheduling/availability.service.js";
 import { getAvailability } from "../scheduling/availability.service.js";
 import {
@@ -11,7 +12,7 @@ import {
 } from "../scheduling/appointment.service.js";
 import { verifyOtp, startOtp } from "./otp.service.js";
 import {
-  portalTenantOf,
+  requireBookingOpen,
   requirePortalCustomer,
   resolvePortalTenant,
 } from "./portal-context.js";
@@ -53,6 +54,7 @@ export async function portalRoutes(app: FastifyInstance) {
       routes.post(
         "/auth/start",
         {
+          preHandler: [requireBookingOpen],
           config: { rateLimit: { max: 5, timeWindow: "15 minutes" } },
           schema: {
             tags,
@@ -166,7 +168,7 @@ export async function portalRoutes(app: FastifyInstance) {
           },
         },
         async (request) => {
-          const tenant = portalTenantOf(request);
+          const tenant = await tenantOf(request);
           const availability = await getAvailability(scopeOf(request), tenant, {
             date: request.query.date,
             serviceIds: request.query.serviceIds,
@@ -183,7 +185,7 @@ export async function portalRoutes(app: FastifyInstance) {
       routes.post(
         "/book",
         {
-          preHandler: [requirePortalCustomer],
+          preHandler: [requirePortalCustomer, requireBookingOpen],
           schema: {
             tags,
             security,
@@ -197,7 +199,7 @@ export async function portalRoutes(app: FastifyInstance) {
           },
         },
         async (request) =>
-          createAppointment(scopeOf(request), portalTenantOf(request), {
+          createAppointment(scopeOf(request), await tenantOf(request), {
             source: "portal",
             actor: "customer",
             enforceSingleActiveByPhone: true,
@@ -245,7 +247,7 @@ export async function portalRoutes(app: FastifyInstance) {
         async (request) => {
           const appointment = await cancelAppointmentByCustomer(
             scopeOf(request),
-            portalTenantOf(request),
+            await tenantOf(request),
             {
               appointmentId: request.body.appointmentId,
               customerId: request.customerAuth!.customerId,

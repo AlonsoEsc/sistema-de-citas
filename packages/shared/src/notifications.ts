@@ -64,3 +64,72 @@ export function appointmentMessage(
     time: formatTime(context.startAt, context.timeZone, locale),
   });
 }
+
+/**
+ * Variables de plantilla de una cita, ya formateadas en la zona horaria del negocio. Las
+ * plantillas usan {{when}} (fecha y hora) o {{time}} (solo hora), nunca la fecha ISO.
+ */
+export function appointmentTemplateVariables(
+  context: AppointmentMessageContext,
+) {
+  const locale = context.locale ?? DEFAULT_LOCALE;
+  return {
+    customerName: context.customerName,
+    staffName: context.staffName,
+    when: formatDateTime(context.startAt, context.timeZone, locale),
+    time: formatTime(context.startAt, context.timeZone, locale),
+  };
+}
+
+export type DefaultTemplate = {
+  channel: "email" | "whatsapp";
+  eventType: string;
+  subject?: string;
+  body: string;
+};
+
+/** Plantillas con las que nace todo negocio; el negocio las edita desde Ajustes. */
+export const DEFAULT_NOTIFICATION_TEMPLATES: DefaultTemplate[] = [
+  {
+    channel: "email",
+    eventType: APPOINTMENT_EVENTS.created,
+    subject: "Tu cita quedó agendada",
+    body: "Hola {{customerName}}, tu cita con {{staffName}} quedó agendada para {{when}}.",
+  },
+  {
+    channel: "email",
+    eventType: APPOINTMENT_EVENTS.reminder24h,
+    subject: "Recordatorio de tu cita",
+    body: "Hola {{customerName}}, te esperamos mañana a las {{time}} con {{staffName}}.",
+  },
+  {
+    channel: "whatsapp",
+    eventType: APPOINTMENT_EVENTS.reminder24h,
+    body: "Hola {{customerName}}, te recordamos tu cita con {{staffName}} para {{when}}. Responde CONFIRMAR, REAGENDAR o CANCELAR.",
+  },
+  {
+    channel: "whatsapp",
+    eventType: APPOINTMENT_EVENTS.reminder2h,
+    body: "Hola {{customerName}}, tu cita con {{staffName}} es hoy a las {{time}}.",
+  },
+  {
+    channel: "whatsapp",
+    eventType: APPOINTMENT_EVENTS.confirmed,
+    body: "Tu cita con {{staffName}} para {{when}} quedó confirmada.",
+  },
+  {
+    channel: "whatsapp",
+    eventType: APPOINTMENT_EVENTS.cancelled,
+    body: "Tu cita con {{staffName}} para {{when}} fue cancelada.",
+  },
+  {
+    channel: "whatsapp",
+    eventType: APPOINTMENT_EVENTS.followup,
+    body: "Gracias por tu visita, {{customerName}}. ¿Cómo fue tu experiencia? Responde del 1 al 5.",
+  },
+  {
+    channel: "whatsapp",
+    eventType: APPOINTMENT_EVENTS.noShowFollowup,
+    body: "Hola {{customerName}}, notamos que no pudiste asistir. Responde AGENDAR para encontrar un nuevo horario o ASESOR si necesitas ayuda.",
+  },
+];

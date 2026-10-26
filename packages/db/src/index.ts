@@ -7,3 +7,4 @@ export {
   type TenantDb,
   type TenantTx,
 } from "./tenant-scope";
+export { countWhatsappMessagesSince } from "./usage";

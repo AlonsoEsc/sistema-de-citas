@@ -1,8 +1,19 @@
+/**
+ * Datos de desarrollo: un negocio demo (barberia) con los tres roles, personal, horarios,
+ * servicios y plantillas. Es idempotente: se puede correr varias veces.
+ */
+import {
+  DEFAULT_ROLES,
+  PERMISSION_DESCRIPTIONS,
+  type PermissionKey,
+} from "@citas/shared/access";
+import { industryProfile } from "@citas/shared/industries";
+import { DEFAULT_NOTIFICATION_TEMPLATES } from "@citas/shared/notifications";
+import bcrypt from "bcryptjs";
 import { config } from "dotenv";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPrismaClient } from "../src/index";
-import bcrypt from "bcryptjs";
 
 config({
   path: resolve(dirname(fileURLToPath(import.meta.url)), "../../../.env"),
@@ -10,369 +21,172 @@ config({
 });
 const prisma = createPrismaClient();
 
+const DEMO_USERS = [
+  { email: "admin@demo.com", password: "Admin1234!", role: "owner" },
+  { email: "staff@demo.com", password: "Staff1234!", role: "staff" },
+  {
+    email: "recepcion@demo.com",
+    password: "Recepcion1234!",
+    role: "receptionist",
+  },
+];
+
+const DAY_MS = 86_400_000;
+
+async function seedPermissionsAndRoles(tenantId: string) {
+  const permissions = new Map<PermissionKey, string>();
+  for (const [key, description] of Object.entries(PERMISSION_DESCRIPTIONS)) {
+    const permission = await prisma.permission.upsert({
+      where: { key },
+      create: { key, description },
+      update: { description },
+    });
+    permissions.set(key as PermissionKey, permission.id);
+  }
+
+  const roles = new Map<string, string>();
+  for (const [name, keys] of Object.entries(DEFAULT_ROLES)) {
+    const role = await prisma.role.upsert({
+      where: { tenantId_name: { tenantId, name } },
+      create: { tenantId, name },
+      update: {},
+    });
+    roles.set(name, role.id);
+    for (const key of keys) {
+      const permissionId = permissions.get(key)!;
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: role.id, permissionId } },
+        create: { roleId: role.id, permissionId },
+        update: {},
+      });
+    }
+  }
+  return roles;
+}
+
 async function main() {
   const tenantId =
     process.env.DEFAULT_TENANT_ID ?? "11111111-1111-1111-1111-111111111111";
   const tenantSlug = process.env.DEFAULT_TENANT_SLUG ?? "demo-barberia";
+  const industry = industryProfile("barbershop");
 
+  const tenantData = {
+    name: "Demo Barber Studio",
+    slug: tenantSlug,
+    industry: industry.code,
+    timezone: "America/El_Salvador",
+    currency: "USD",
+    locale: "es-SV",
+  };
   await prisma.tenant.upsert({
     where: { id: tenantId },
     create: {
       id: tenantId,
-      name: "Demo Barber Studio",
-      slug: tenantSlug,
-      timezone: "America/Mexico_City",
-      currency: "MXN",
-      settings: {
-        create: {
-          cancelPolicyMinutes: 120,
-          bookingWindowDays: 45,
-          brandingJson: {
-            primary: "#0F766E",
-            accent: "#EA580C",
-            logoText: "Demo Barber Studio",
-          },
-        },
-      },
+      ...tenantData,
+      settings: { create: { cancelPolicyMinutes: 120, bookingWindowDays: 45 } },
     },
-    update: {},
+    update: tenantData,
   });
 
-  const [ownerRole, staffRole, receptionistRole] = await Promise.all([
-    prisma.role.upsert({
-      where: { tenantId_name: { tenantId, name: "owner" } },
-      create: { tenantId, name: "owner" },
-      update: {},
-    }),
-    prisma.role.upsert({
-      where: { tenantId_name: { tenantId, name: "staff" } },
-      create: { tenantId, name: "staff" },
-      update: {},
-    }),
-    prisma.role.upsert({
-      where: { tenantId_name: { tenantId, name: "receptionist" } },
-      create: { tenantId, name: "receptionist" },
-      update: {},
-    }),
-  ]);
-
-  const permissions = [
-    { key: "appointments.manage", description: "Crear y modificar citas" },
-    { key: "staff.manage", description: "Gestionar personal" },
-    { key: "services.manage", description: "Gestionar servicios" },
-    { key: "customers.manage", description: "Gestionar clientes" },
-    { key: "reports.view", description: "Ver reportes" },
-    {
-      key: "settings.manage",
-      description: "Gestionar ajustes, integraciones, plantillas y plan",
+  // El demo usa el plan mas completo para mostrar todas las funciones.
+  const plan = await prisma.plan.findUniqueOrThrow({
+    where: { code: "clinica" },
+  });
+  const periodEnd = new Date(Date.now() + 30 * DAY_MS);
+  await prisma.subscription.upsert({
+    where: { tenantId },
+    create: {
+      tenantId,
+      planId: plan.id,
+      status: "active",
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: periodEnd,
     },
-  ];
-
-  for (const perm of permissions) {
-    await prisma.permission.upsert({
-      where: { key: perm.key },
-      create: perm,
-      update: {},
-    });
-  }
-
-  const ownerPerms = await prisma.permission.findMany({
-    where: { key: { in: permissions.map((p) => p.key) } },
+    update: { planId: plan.id, status: "active", currentPeriodEnd: periodEnd },
   });
 
-  for (const perm of ownerPerms) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: { roleId: ownerRole.id, permissionId: perm.id },
-      },
-      create: { roleId: ownerRole.id, permissionId: perm.id },
-      update: {},
-    });
-  }
-
-  const staffPerms = ownerPerms.filter((p) => p.key === "appointments.manage");
-  for (const perm of staffPerms) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: { roleId: staffRole.id, permissionId: perm.id },
-      },
-      create: { roleId: staffRole.id, permissionId: perm.id },
-      update: {},
-    });
-  }
-
-  const receptionistPerms = ownerPerms.filter(
-    (p) => p.key === "appointments.manage" || p.key === "customers.manage",
-  );
-  for (const perm of receptionistPerms) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
-          roleId: receptionistRole.id,
-          permissionId: perm.id,
-        },
-      },
-      create: { roleId: receptionistRole.id, permissionId: perm.id },
-      update: {},
-    });
-  }
-
-  const usersToEnsure = [
-    { email: "admin@demo.com", password: "Admin1234!", roleId: ownerRole.id },
-    { email: "staff@demo.com", password: "Staff1234!", roleId: staffRole.id },
-    {
-      email: "recepcion@demo.com",
-      password: "Recepcion1234!",
-      roleId: receptionistRole.id,
-    },
-  ];
-
-  for (const demoUser of usersToEnsure) {
+  const roles = await seedPermissionsAndRoles(tenantId);
+  for (const demoUser of DEMO_USERS) {
     const passwordHash = await bcrypt.hash(demoUser.password, 10);
     const user = await prisma.user.upsert({
       where: { email: demoUser.email },
       create: {
         email: demoUser.email,
         passwordHash,
+        emailVerifiedAt: new Date(),
       },
-      update: {
-        passwordHash,
-        isActive: true,
-      },
+      update: { passwordHash, isActive: true },
     });
-
     await prisma.tenantUser.upsert({
       where: { tenantId_userId: { tenantId, userId: user.id } },
       create: { tenantId, userId: user.id, status: "active" },
       update: { status: "active" },
     });
-
+    const roleId = roles.get(demoUser.role)!;
     await prisma.userRole.upsert({
-      where: {
-        tenantId_userId_roleId: {
-          tenantId,
-          userId: user.id,
-          roleId: demoUser.roleId,
-        },
-      },
-      create: { tenantId, userId: user.id, roleId: demoUser.roleId },
+      where: { tenantId_userId_roleId: { tenantId, userId: user.id, roleId } },
+      create: { tenantId, userId: user.id, roleId },
       update: {},
     });
   }
 
-  const basicPlan = await prisma.plan.upsert({
-    where: { code: "basic" },
-    create: {
-      code: "basic",
-      name: "Basic",
-      billingPeriod: "monthly",
-      priceCents: 29900,
-    },
-    update: {},
-  });
-
-  await prisma.tenantSubscription.upsert({
-    where: { tenantId_planId: { tenantId, planId: basicPlan.id } },
-    create: {
+  // Entitlements como excepciones del negocio: el plan ya define los canales.
+  await prisma.tenantEntitlement.deleteMany({
+    where: {
       tenantId,
-      planId: basicPlan.id,
-      status: "active",
-      currentPeriodEnd: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
-    },
-    update: {
-      status: "active",
-      currentPeriodEnd: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+      key: { in: ["staff.limit", "reports.advanced.enabled"] },
     },
   });
 
-  const entitlements = [
-    { key: "notifications.whatsapp.enabled", valueJson: { enabled: true } },
-    { key: "notifications.email.enabled", valueJson: { enabled: true } },
-    { key: "staff.limit", valueJson: { n: 5 } },
-    { key: "reports.advanced.enabled", valueJson: { enabled: true } },
-  ];
-
-  for (const entitlement of entitlements) {
-    await prisma.tenantEntitlement.upsert({
-      where: { tenantId_key: { tenantId, key: entitlement.key } },
-      create: {
-        tenantId,
-        key: entitlement.key,
-        valueJson: entitlement.valueJson,
-      },
-      update: { valueJson: entitlement.valueJson },
-    });
+  if ((await prisma.staff.count({ where: { tenantId } })) === 0) {
+    for (const displayName of ["Carlos Rivera", "Andrea Flores"]) {
+      await prisma.staff.create({ data: { tenantId, displayName } });
+    }
   }
-
-  const existingStaff = await prisma.staff.findMany({ where: { tenantId } });
-  const staffMembers =
-    existingStaff.length > 0
-      ? existingStaff
-      : await Promise.all([
-          prisma.staff.create({
-            data: {
-              tenantId,
-              displayName: "Carlos Rivera",
-              phone: "+525511111111",
-              commissionType: "percent",
-              commissionValue: 35,
-            },
-          }),
-          prisma.staff.create({
-            data: {
-              tenantId,
-              displayName: "Andrea Flores",
-              phone: "+525522222222",
-              commissionType: "percent",
-              commissionValue: 40,
-            },
-          }),
-        ]);
-
+  const staffMembers = await prisma.staff.findMany({ where: { tenantId } });
   for (const staff of staffMembers) {
-    const count = await prisma.staffSchedule.count({
-      where: { tenantId, staffId: staff.id },
-    });
-    if (count > 0) {
+    if (
+      (await prisma.staffSchedule.count({ where: { staffId: staff.id } })) > 0
+    ) {
       continue;
     }
-    for (const day of [1, 2, 3, 4, 5, 6]) {
-      await prisma.staffSchedule.create({
-        data: {
-          tenantId,
-          staffId: staff.id,
-          dayOfWeek: day,
-          startTime: "09:00",
-          endTime: "19:00",
-          breakJson: [{ start: "14:00", end: "15:00" }],
-        },
-      });
-    }
-  }
-
-  const existingServices = await prisma.service.count({ where: { tenantId } });
-  if (existingServices === 0) {
-    await Promise.all([
-      prisma.service.create({
-        data: {
-          tenantId,
-          name: "Corte clasico",
-          durationMinutes: 45,
-          priceCents: 25000,
-        },
-      }),
-      prisma.service.create({
-        data: {
-          tenantId,
-          name: "Corte + barba premium",
-          durationMinutes: 75,
-          priceCents: 42000,
-        },
-      }),
-      prisma.service.create({
-        data: {
-          tenantId,
-          name: "Limpieza facial",
-          durationMinutes: 30,
-          priceCents: 18000,
-        },
-      }),
-    ]);
-  }
-
-  await prisma.notificationTemplate.upsert({
-    where: {
-      tenantId_channel_eventType: {
+    await prisma.staffSchedule.createMany({
+      data: [1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
         tenantId,
-        channel: "email",
-        eventType: "appointment.reminder_24h",
-      },
-    },
-    create: {
-      tenantId,
-      channel: "email",
-      eventType: "appointment.reminder_24h",
-      subject: "Recordatorio de cita",
-      body: "Hola {{customerName}}, te esperamos manana a las {{startAt}}.",
-    },
-    update: {
-      subject: "Recordatorio de cita",
-      body: "Hola {{customerName}}, te esperamos manana a las {{startAt}}.",
-    },
-  });
-
-  await prisma.notificationTemplate.upsert({
-    where: {
-      tenantId_channel_eventType: {
-        tenantId,
-        channel: "whatsapp",
-        eventType: "appointment.created",
-      },
-    },
-    create: {
-      tenantId,
-      channel: "whatsapp",
-      eventType: "appointment.created",
-      body: "Tu cita fue creada para {{startAt}} con {{staffName}}.",
-    },
-    update: {
-      body: "Tu cita fue creada para {{startAt}} con {{staffName}}.",
-    },
-  });
-
-  const whatsappTemplates = [
-    {
-      eventType: "appointment.reminder_24h",
-      body: "Hola {{customerName}}, te recordamos tu cita con {{staffName}} para {{startAt}}. Responde CONFIRMAR, REAGENDAR o CANCELAR.",
-    },
-    {
-      eventType: "appointment.reminder_2h",
-      body: "Hola {{customerName}}, tu cita con {{staffName}} es en aproximadamente 2 horas.",
-    },
-    {
-      eventType: "appointment.confirmed",
-      body: "Tu cita con {{staffName}} para {{startAt}} quedó confirmada.",
-    },
-    {
-      eventType: "appointment.cancelled",
-      body: "Tu cita con {{staffName}} para {{startAt}} fue cancelada.",
-    },
-    {
-      eventType: "appointment.followup",
-      body: "Gracias por tu visita, {{customerName}}. ¿Cómo fue tu experiencia? Responde del 1 al 5.",
-    },
-    {
-      eventType: "appointment.no_show_followup",
-      body: "Hola {{customerName}}, notamos que no pudiste asistir. Responde AGENDAR para encontrar un nuevo horario o ASESOR si necesitas ayuda.",
-    },
-    {
-      eventType: "auth.otp.requested",
-      body: "Tu código de verificación es {{code}}. Vence en {{expiresInMinutes}} minutos.",
-    },
-  ];
-
-  for (const template of whatsappTemplates) {
-    await prisma.notificationTemplate.upsert({
-      where: {
-        tenantId_channel_eventType: {
-          tenantId,
-          channel: "whatsapp",
-          eventType: template.eventType,
-        },
-      },
-      create: {
-        tenantId,
-        channel: "whatsapp",
-        eventType: template.eventType,
-        body: template.body,
-      },
-      update: {
-        body: template.body,
-      },
+        staffId: staff.id,
+        dayOfWeek,
+        startTime: "09:00",
+        endTime: "19:00",
+        breakJson: [{ start: "14:00", end: "15:00" }],
+      })),
     });
   }
 
-  console.log("Seed listo: admin, staff y receptionist creados.");
+  for (const service of industry.suggestedServices) {
+    const existing = await prisma.service.findFirst({
+      where: { tenantId, name: service.name },
+    });
+    if (!existing) {
+      await prisma.service.create({ data: { tenantId, ...service } });
+    }
+  }
+
+  for (const template of DEFAULT_NOTIFICATION_TEMPLATES) {
+    const key = {
+      tenantId,
+      channel: template.channel,
+      eventType: template.eventType,
+    };
+    await prisma.notificationTemplate.upsert({
+      where: { tenantId_channel_eventType: key },
+      create: { ...key, subject: template.subject, body: template.body },
+      update: { subject: template.subject, body: template.body },
+    });
+  }
+
+  console.log(
+    `Seed listo: negocio "${tenantSlug}" (plan ${plan.code}) con ${DEMO_USERS.length} usuarios demo.`,
+  );
 }
 
 main()

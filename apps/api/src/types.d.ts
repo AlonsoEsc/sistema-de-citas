@@ -15,8 +15,8 @@ declare module "fastify" {
     };
     /** Cliente del portal verificado por OTP (lo asigna requirePortalCustomer). */
     customerAuth?: BookingCustomerTokenPayload;
-    /** Negocio del portal resuelto por slug. */
-    portalTenant?: TenantContext;
+    /** Contexto del negocio de la peticion (se carga una vez y se reutiliza). */
+    tenant?: TenantContext;
     /** Acceso a datos filtrado por el negocio de la peticion. */
     scope?: TenantScope;
   }

@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { createPrismaClient } from "@citas/db";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
+import { grantSubscription } from "./helpers.js";
 
 const prisma = createPrismaClient();
 const tenantId = "88888888-8888-4888-8888-888888888888";
@@ -58,6 +59,7 @@ test.before(async () => {
       },
     },
   });
+  await grantSubscription(prisma, tenantId);
 
   const appointmentsPermission = await prisma.permission.upsert({
     where: { key: "appointments.manage" },

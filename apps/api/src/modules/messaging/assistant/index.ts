@@ -2,6 +2,7 @@ import { Prisma, type PrismaClient } from "@citas/db";
 import { normalizePhone } from "@citas/shared/phone";
 import { asRecord, toJsonValue } from "../../../shared/json.js";
 import { tenantScope } from "../../../shared/tenant-scope.js";
+import { ENTITLEMENTS, isEnabled } from "../../tenancy/entitlements.js";
 import { loadTenantContext } from "../../tenancy/tenant-context.js";
 import { mirrorInboundToChatwoot } from "../chatwoot-mirror.service.js";
 import {
@@ -194,6 +195,18 @@ export async function processInboundWhatsappMessage(
     flow: asRecord(session.contextJson),
     customer,
   });
+
+  // Sin asistente en el plan (o con la cuenta vencida) el mensaje queda en la bandeja humana;
+  // aun asi se respetan las altas y bajas de mensajes, que son obligatorias.
+  const assistantActive =
+    tenant.access === "full" &&
+    isEnabled(tenant.entitlements, ENTITLEMENTS.whatsappAssistant);
+  const isPreferenceCommand =
+    isCommand(conversation.command, COMMANDS.optOut) ||
+    isCommand(conversation.command, COMMANDS.optIn);
+  if (!assistantActive && !isPreferenceCommand) {
+    return { ignored: true, reason: "assistant_disabled" };
+  }
 
   const globalResult = await handleGlobalCommands(conversation);
   if (globalResult) {

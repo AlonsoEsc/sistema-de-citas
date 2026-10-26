@@ -14,7 +14,9 @@
     "./time": "./src/time.ts",
     "./notifications": "./src/notifications.ts",
     "./crypto": "./src/crypto.ts",
-    "./integrations": "./src/integrations.ts"
+    "./integrations": "./src/integrations.ts",
+    "./industries": "./src/industries.ts",
+    "./access": "./src/access.ts"
   },
   "dependencies": {
     "dayjs": "^1.11.13"

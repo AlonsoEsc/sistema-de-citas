@@ -17,6 +17,13 @@ export function unauthorized(message = "No autorizado", code = "UNAUTHORIZED") {
   return new HttpError(401, message, code);
 }
 
+export function paymentRequired(
+  message = "Se requiere una suscripcion activa",
+  code = "PAYMENT_REQUIRED",
+) {
+  return new HttpError(402, message, code);
+}
+
 export function forbidden(message = "No permitido", code = "FORBIDDEN") {
   return new HttpError(403, message, code);
 }

@@ -3,6 +3,7 @@ import test from "node:test";
 import { randomUUID } from "node:crypto";
 import { createPrismaClient } from "@citas/db";
 import { processInboundWhatsappMessage } from "../src/modules/messaging/assistant/index.js";
+import { grantSubscription } from "./helpers.js";
 
 const prisma = createPrismaClient();
 const tenantId = "77777777-7777-4777-8777-777777777777";
@@ -74,6 +75,7 @@ test.before(async () => {
       },
     },
   });
+  await grantSubscription(prisma, tenantId);
   const staff = await prisma.staff.create({
     data: {
       tenantId,

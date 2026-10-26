@@ -5,6 +5,7 @@ import { createPrismaClient } from "@citas/db";
 import { addCalendarDays, todayIn, zonedDateTime } from "@citas/shared/time";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
+import { grantSubscription } from "./helpers.js";
 
 const prisma = createPrismaClient();
 const tenantId = "5c5c5c5c-0000-4000-8000-000000000005";
@@ -65,6 +66,7 @@ test.before(async () => {
       settings: { create: { cancelPolicyMinutes: 60, bookingWindowDays: 14 } },
     },
   });
+  await grantSubscription(prisma, tenantId);
   const owner = await prisma.user.create({
     data: { email: ownerEmail, passwordHash: await bcrypt.hash(password, 4) },
   });

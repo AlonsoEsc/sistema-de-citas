@@ -20,9 +20,10 @@
     "@prisma/client": "7.10.1"
   },
   "devDependencies": {
+    "@citas/shared": "*",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.5",
     "bcryptjs": "^2.4.3",
-    "@types/bcryptjs": "^2.4.6",
     "dotenv": "^16.4.5",
     "prisma": "7.10.1",
     "tsx": "^4.19.2",

@@ -7,6 +7,37 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Industry {
+  barbershop
+  beauty_salon
+  nail_salon
+  spa
+  medical_clinic
+  dental
+  psychology
+  physiotherapy
+  veterinary
+  fitness
+  other
+}
+
+enum TenantStatus {
+  active
+  suspended
+}
+
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  canceled
+}
+
+enum UserTokenType {
+  password_reset
+  email_verification
+}
+
 enum AppointmentStatus {
   pending
   confirmed
@@ -76,8 +107,11 @@ model Tenant {
   id                   String                        @id @default(uuid()) @db.Uuid
   name                 String
   slug                 String                        @unique
-  timezone             String                        @default("America/Mexico_City")
-  currency             String                        @default("MXN")
+  industry             Industry                      @default(other)
+  status               TenantStatus                  @default(active)
+  timezone             String                        @default("America/El_Salvador")
+  currency             String                        @default("USD")
+  locale               String                        @default("es-SV")
   createdAt            DateTime                      @default(now())
   settings             TenantSetting?
   tenantUsers          TenantUser[]
@@ -88,7 +122,10 @@ model Tenant {
   customers            Customer[]
   appointments         Appointment[]
   userRoles            UserRole[]
-  subscriptions        TenantSubscription[]
+  subscription         Subscription?
+  payments             Payment[]
+  invitations          Invitation[]
+  auditLogs            AuditLog[]
   entitlements         TenantEntitlement[]
   notificationOutbox   NotificationOutbox[]
   notificationTpls     NotificationTemplate[]
@@ -109,13 +146,54 @@ model TenantSetting {
 }
 
 model User {
-  id           String       @id @default(uuid()) @db.Uuid
-  email        String       @unique
-  passwordHash String
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  tenantUsers  TenantUser[]
-  userRoles    UserRole[]
+  id               String       @id @default(uuid()) @db.Uuid
+  email            String       @unique
+  fullName         String?
+  passwordHash     String
+  isActive         Boolean      @default(true)
+  /// Operador de la plataforma (panel de superadmin). No pertenece a ningun negocio.
+  isPlatformAdmin  Boolean      @default(false)
+  emailVerifiedAt  DateTime?
+  createdAt        DateTime     @default(now())
+  tenantUsers      TenantUser[]
+  userRoles        UserRole[]
+  tokens           UserToken[]
+  sentInvitations  Invitation[]
+  recordedPayments Payment[]
+  auditLogs        AuditLog[]
+}
+
+/// Tokens de un solo uso para recuperar la contrasena o verificar el correo (se guarda el hash).
+model UserToken {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @db.Uuid
+  type      UserTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+/// Invitacion a unirse al equipo de un negocio con un rol.
+model Invitation {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @db.Uuid
+  email       String
+  roleId      String    @db.Uuid
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  invitedById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  invitedBy   User?     @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, email])
 }
 
 model TenantUser {
@@ -137,6 +215,7 @@ model Role {
   tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   permissions RolePermission[]
   userRoles   UserRole[]
+  invitations Invitation[]
 
   @@unique([tenantId, name])
 }
@@ -269,24 +348,84 @@ model AppointmentService {
 }
 
 model Plan {
-  id            String               @id @default(uuid()) @db.Uuid
-  code          String               @unique
-  name          String
-  priceCents    Int
-  billingPeriod String               @default("monthly")
-  subscriptions TenantSubscription[]
+  id                       String         @id @default(uuid()) @db.Uuid
+  code                     String         @unique
+  name                     String
+  priceCents               Int
+  currency                 String         @default("USD")
+  billingPeriod            String         @default("monthly")
+  /// Profesionales activos permitidos.
+  maxStaff                 Int            @default(1)
+  /// Mensajes de WhatsApp salientes incluidos por mes.
+  whatsappMessagesPerMonth Int            @default(0)
+  /// Funciones del plan, con la misma forma que TenantEntitlement: { clave: { enabled } }.
+  featuresJson             Json?
+  active                   Boolean        @default(true)
+  sortOrder                Int            @default(0)
+  subscriptions            Subscription[]
 }
 
-model TenantSubscription {
-  tenantId          String    @db.Uuid
-  planId            String    @db.Uuid
-  status            String
-  currentPeriodEnd  DateTime?
-  cancelAtPeriodEnd Boolean   @default(false)
-  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  plan              Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+/// Suscripcion del negocio a la plataforma. Un negocio tiene exactamente una.
+model Subscription {
+  id                 String             @id @default(uuid()) @db.Uuid
+  tenantId           String             @unique @db.Uuid
+  planId             String             @db.Uuid
+  status             SubscriptionStatus
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean            @default(false)
+  canceledAt         DateTime?
+  /// "manual" mientras los pagos se registran desde el panel de superadmin.
+  provider           String             @default("manual")
+  externalId         String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan               Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
+  payments           Payment[]
 
-  @@id([tenantId, planId])
+  @@index([status, currentPeriodEnd])
+}
+
+/// Pago recibido por la plataforma; extiende el periodo de la suscripcion.
+model Payment {
+  id             String       @id @default(uuid()) @db.Uuid
+  tenantId       String       @db.Uuid
+  subscriptionId String       @db.Uuid
+  amountCents    Int
+  currency       String
+  method         String
+  reference      String?
+  notes          String?
+  periodStart    DateTime
+  periodEnd      DateTime
+  paidAt         DateTime
+  recordedById   String?      @db.Uuid
+  createdAt      DateTime     @default(now())
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  recordedBy     User?        @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, paidAt])
+}
+
+/// Bitacora de acciones relevantes (seguridad, facturacion, configuracion).
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String?  @db.Uuid
+  actorUserId  String?  @db.Uuid
+  action       String
+  entityType   String?
+  entityId     String?
+  metadataJson Json?
+  ip           String?
+  createdAt    DateTime @default(now())
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor        User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([action, createdAt])
 }
 
 model TenantEntitlement {

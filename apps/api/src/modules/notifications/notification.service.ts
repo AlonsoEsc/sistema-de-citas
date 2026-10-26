@@ -1,15 +1,22 @@
-import type { Customer, NotificationChannel } from "@citas/db";
+import {
+  countWhatsappMessagesSince,
+  type Customer,
+  type NotificationChannel,
+} from "@citas/db";
 import {
   appointmentMessage,
+  appointmentTemplateVariables,
   type AppointmentEvent,
 } from "@citas/shared/notifications";
 import { normalizePhone } from "@citas/shared/phone";
+import { startOfMonthIn } from "@citas/shared/time";
 import type { TenantTxScope } from "../../shared/tenant-scope.js";
 import {
   ENTITLEMENTS,
   isEnabled,
   loadEntitlements,
 } from "../tenancy/entitlements.js";
+import type { TenantContext } from "../tenancy/tenant-context.js";
 
 type ContactInfo = Pick<Customer, "phone" | "email" | "whatsappOptOutAt">;
 
@@ -52,13 +59,28 @@ export async function enabledNotificationChannels(
   return channels;
 }
 
+type NotifyingTenant = Pick<TenantContext, "timezone" | "locale" | "limits">;
+
+/** Mensajes de WhatsApp enviados este mes y cupo del plan. */
+export async function whatsappUsage(
+  { db, tenantId }: TenantTxScope,
+  tenant: NotifyingTenant,
+) {
+  const used = await countWhatsappMessagesSince(
+    db,
+    tenantId,
+    startOfMonthIn(tenant.timezone),
+  );
+  return { used, included: tenant.limits.whatsappMessagesPerMonth };
+}
+
 /**
  * Encola una notificacion por canal en el outbox. Es idempotente: el mismo evento para la
  * misma cita y canal no se duplica (usa `idempotencySuffix` para eventos repetibles).
  */
 export async function queueAppointmentNotifications(
   scope: TenantTxScope,
-  timeZone: string,
+  tenant: NotifyingTenant,
   appointment: AppointmentForNotification,
   event: AppointmentEvent,
   options: {
@@ -68,15 +90,25 @@ export async function queueAppointmentNotifications(
   } = {},
 ) {
   const { db, tenantId } = scope;
-  const channels =
+  let channels =
     options.channels ??
     (await enabledNotificationChannels(scope, appointment.customer));
-  const message = appointmentMessage(event, {
+  // Con el cupo mensual del plan agotado, los avisos automaticos siguen por los otros canales.
+  if (channels.includes("whatsapp")) {
+    const usage = await whatsappUsage(scope, tenant);
+    if (usage.used >= usage.included) {
+      channels = channels.filter((channel) => channel !== "whatsapp");
+    }
+  }
+  const messageContext = {
     customerName: appointment.customer.fullName,
     staffName: appointment.staff.displayName,
     startAt: appointment.startAt,
-    timeZone,
-  });
+    timeZone: tenant.timezone,
+    locale: tenant.locale,
+  };
+  const message = appointmentMessage(event, messageContext);
+  const variables = appointmentTemplateVariables(messageContext);
 
   const queued = [];
   for (const channel of channels) {
@@ -106,9 +138,8 @@ export async function queueAppointmentNotifications(
           idempotencyKey,
           scheduledFor: options.scheduledFor,
           payloadJson: {
+            ...variables,
             appointmentId: appointment.id,
-            customerName: appointment.customer.fullName,
-            staffName: appointment.staff.displayName,
             services:
               appointment.services?.map((item) => item.service.name) ?? [],
             startAt: appointment.startAt.toISOString(),

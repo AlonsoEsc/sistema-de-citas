@@ -10,6 +10,7 @@ import {
   staffInputSchema,
 } from "./catalog.schemas.js";
 import * as catalog from "./catalog.service.js";
+import { tenantOf } from "../tenancy/tenant-context.js";
 
 const security = [{ bearerAuth: [] }];
 
@@ -28,7 +29,12 @@ export async function catalogRoutes(app: FastifyInstance) {
       preHandler: adminAccess(PERMISSIONS.staffManage),
       schema: { tags: staffTags, security, body: staffInputSchema },
     },
-    async (request) => catalog.createStaff(scopeOf(request), request.body),
+    async (request) =>
+      catalog.createStaff(
+        scopeOf(request),
+        await tenantOf(request),
+        request.body,
+      ),
   );
   routes.patch(
     "/staff/:id",
@@ -42,7 +48,12 @@ export async function catalogRoutes(app: FastifyInstance) {
       },
     },
     async (request) =>
-      catalog.updateStaff(scopeOf(request), request.params.id, request.body),
+      catalog.updateStaff(
+        scopeOf(request),
+        await tenantOf(request),
+        request.params.id,
+        request.body,
+      ),
   );
   routes.get(
     "/staff/:id/schedule",
