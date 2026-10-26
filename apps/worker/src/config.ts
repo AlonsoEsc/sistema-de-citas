@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
@@ -29,6 +30,13 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   ENCRYPTION_KEY: z.string().min(32),
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).default(15_000),
+  // Archivo que el worker toca en cada ciclo; el healthcheck de Docker revisa su antiguedad.
+  WORKER_HEARTBEAT_FILE: z
+    .string()
+    .default(resolve(tmpdir(), "citas-worker-heartbeat")),
+  APP_VERSION: z.string().default("dev"),
+  SENTRY_DSN: optional,
+  SENTRY_ENVIRONMENT: optional,
   WORKER_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(25),
   // "log" no contacta proveedores: evita enviar mensajes reales desde desarrollo o pruebas.
   WORKER_SEND_MODE: z.enum(["live", "log"]).optional(),

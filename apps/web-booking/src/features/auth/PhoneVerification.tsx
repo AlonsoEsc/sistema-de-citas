@@ -4,6 +4,7 @@ import { BackButton, Button, Field, Notice } from "../../components/ui";
 import { bookingApi } from "../../lib/api";
 import { apiErrorMessage } from "../../lib/errors";
 import type { BookingSession } from "../../lib/session";
+import { legalLinks } from "../../lib/legal";
 import { useTerms } from "../../lib/tenant-profile";
 import { SOCIAL_LOGIN_AVAILABLE, SocialLogin } from "./SocialLogin";
 
@@ -72,8 +73,7 @@ export function PhoneVerification({
           code,
         })
       ).data,
-    onSuccess: (session) =>
-      onVerified({ token: session.token, customer: session.customer }),
+    onSuccess: (session) => onVerified({ customer: session.customer }),
     onError: (error) =>
       setProblem(apiErrorMessage(error, "El código no es válido o ya venció.")),
   });
@@ -178,7 +178,7 @@ export function PhoneVerification({
       <Field
         label="Nombre completo"
         autoComplete="name"
-        required
+        hint="Si ya reservaste aquí antes, puedes dejarlo vacío."
         minLength={2}
         value={form.fullName}
         onChange={(event) => setForm({ ...form, fullName: event.target.value })}
@@ -194,6 +194,23 @@ export function PhoneVerification({
       <Button type="submit" className="w-full" loading={start.isPending}>
         Enviar código
       </Button>
+      <p className="text-center text-xs text-ink-muted">
+        Usaremos tus datos solo para gestionar tus reservas con este negocio.
+        {legalLinks && (
+          <>
+            {" "}
+            <a
+              href={legalLinks.privacy}
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              Política de privacidad
+            </a>
+            .
+          </>
+        )}
+      </p>
 
       {SOCIAL_LOGIN_AVAILABLE && (
         <div className="space-y-3 border-t border-line pt-5">

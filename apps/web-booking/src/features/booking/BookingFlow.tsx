@@ -11,7 +11,6 @@ import {
 } from "../../components/ui";
 import { bookingApi } from "../../lib/api";
 import { apiErrorMessage } from "../../lib/errors";
-import { authHeader, type BookingSession } from "../../lib/session";
 import {
   formatCurrency,
   formatDayChip,
@@ -43,12 +42,10 @@ const optionClass = (selected: boolean) =>
 
 export function BookingFlow({
   slug,
-  session,
   onBack,
   onBooked,
 }: {
   slug: string;
-  session: BookingSession;
   onBack: () => void;
   onBooked: (appointment: BookedAppointment) => void;
 }) {
@@ -112,15 +109,11 @@ export function BookingFlow({
 
   const book = useMutation({
     mutationFn: async (chosen: BookableSlot) =>
-      bookingApi.post(
-        `/public/${slug}/book`,
-        {
-          staffId: chosen.staffId,
-          serviceIds: [serviceId],
-          startAt: chosen.startAt,
-        },
-        { headers: authHeader(session) },
-      ),
+      bookingApi.post(`/public/${slug}/book`, {
+        staffId: chosen.staffId,
+        serviceIds: [serviceId],
+        startAt: chosen.startAt,
+      }),
     onSuccess: async (_response, chosen) => {
       await queryClient.invalidateQueries({
         queryKey: ["my-appointments", slug],

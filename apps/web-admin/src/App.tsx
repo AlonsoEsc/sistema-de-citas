@@ -16,6 +16,7 @@ import {
   AcceptInvitationPage,
   VerifyEmailPage,
 } from "./pages/account/TokenLinkPages";
+import { LegalPage } from "./pages/legal/LegalPage";
 import { PlatformApp } from "./pages/platform/PlatformApp";
 
 function AppRoutes() {
@@ -32,6 +33,8 @@ function AppRoutes() {
       <Route path="/restablecer" element={<ResetPasswordPage />} />
       <Route path="/verificar-correo" element={<VerifyEmailPage />} />
       <Route path="/invitacion" element={<AcceptInvitationPage />} />
+      <Route path="/terminos" element={<LegalPage document="terms" />} />
+      <Route path="/privacidad" element={<LegalPage document="privacy" />} />
       <Route path="*" element={session ? <AdminApp /> : <LoginPage />} />
     </Routes>
   );

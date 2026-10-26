@@ -239,3 +239,242 @@ test("el resumen trae citas por dia y por servicio en la zona del negocio", asyn
     },
   ]);
 });
+
+test("la exportacion trae los datos del negocio sin secretos", async () => {
+  await prisma.integrationConnection.create({
+    data: {
+      tenantId,
+      provider: "whatsapp",
+      scope: "tenant",
+      scopeKey: "tenant",
+      configEnc: "secreto-cifrado",
+    },
+  });
+  const response = await adminRequest("GET", "/tenants/me/export");
+  assert.equal(response.statusCode, 200);
+  assert.match(
+    String(response.headers["content-disposition"]),
+    /attachment; filename="qa-panel-api-/,
+  );
+  const body = response.json();
+  assert.equal(body.tenant.slug, tenantSlug);
+  assert.ok(body.customers.length > 0);
+  assert.deepEqual(
+    body.team.map((member: { email: string }) => member.email),
+    [ownerEmail],
+  );
+  const raw = response.body;
+  for (const secret of [
+    "passwordHash",
+    "configEnc",
+    "secreto-cifrado",
+    "otpCodeHash",
+  ]) {
+    assert.ok(
+      !raw.includes(secret),
+      `la exportacion no debe incluir ${secret}`,
+    );
+  }
+});
+
+test("el cliente puede borrar sus datos desde el portal y su sesion deja de servir", async () => {
+  const customer = await prisma.customer.create({
+    data: { tenantId, fullName: "Se Borra Solo", phone: "+50372220009" },
+  });
+  const future = addCalendarDays(todayIn(timeZone), 3);
+  const appointment = await createAppointment(customer.id, future, "09:00");
+  await prisma.appointment.update({
+    where: { id: appointment.id },
+    data: { status: "confirmed" },
+  });
+  const token = app.jwt.sign({
+    type: "booking_customer",
+    customerId: customer.id,
+    tenantId,
+  });
+  const asCustomer = (method: "GET" | "POST", url: string) =>
+    app.inject({ method, url, headers: { authorization: `Bearer ${token}` } });
+
+  const deleted = await asCustomer("POST", `/public/${tenantSlug}/me/delete`);
+  assert.equal(deleted.statusCode, 200);
+  assert.equal(deleted.json().anonymized, true);
+
+  const stored = await prisma.customer.findUniqueOrThrow({
+    where: { id: customer.id },
+  });
+  assert.equal(stored.phone, null);
+  const cancelled = await prisma.appointment.findUniqueOrThrow({
+    where: { id: appointment.id },
+  });
+  assert.equal(cancelled.status, "cancelled", "su cita futura se cancela");
+
+  const after = await asCustomer(
+    "GET",
+    `/public/${tenantSlug}/my-appointments`,
+  );
+  assert.equal(after.statusCode, 401);
+});
+
+test("la sesion del navegador viaja en una cookie httpOnly con proteccion CSRF", async () => {
+  const login = await app.inject({
+    method: "POST",
+    url: "/auth/login",
+    payload: { email: ownerEmail, password, tenantSlug },
+  });
+  const setCookie = String(login.headers["set-cookie"]);
+  assert.match(setCookie, /^citas_admin=/);
+  assert.match(setCookie, /HttpOnly/i);
+  assert.match(setCookie, /SameSite=Lax/i);
+  const cookie = setCookie.split(";")[0];
+
+  const me = await app.inject({
+    method: "GET",
+    url: "/auth/me",
+    headers: { cookie },
+  });
+  assert.equal(me.statusCode, 200);
+
+  const withoutHeader = await app.inject({
+    method: "PATCH",
+    url: "/tenants/me/settings",
+    headers: { cookie },
+    payload: { bookingWindowDays: 30 },
+  });
+  assert.equal(withoutHeader.statusCode, 403);
+  assert.equal(withoutHeader.json().error, "CSRF_HEADER_MISSING");
+
+  const withHeader = await app.inject({
+    method: "PATCH",
+    url: "/tenants/me/settings",
+    headers: { cookie, "x-requested-with": "citas" },
+    payload: { bookingWindowDays: 30 },
+  });
+  assert.equal(withHeader.statusCode, 200);
+
+  const logout = await app.inject({
+    method: "POST",
+    url: "/auth/logout",
+    headers: { cookie, "x-requested-with": "citas" },
+  });
+  assert.match(String(logout.headers["set-cookie"]), /citas_admin=;/);
+});
+
+test("la cookie del portal queda limitada a las rutas de su negocio", async () => {
+  const customer = await prisma.customer.create({
+    data: { tenantId, fullName: "Cookie Portal", phone: "+50372220010" },
+  });
+  const session = await prisma.customerAuthSession.create({
+    data: {
+      tenantId,
+      provider: "manual",
+      fullName: "Cookie Portal",
+      phone: "+50372220010",
+      otpCodeHash: await bcrypt.hash("123456", 4),
+      otpExpiresAt: new Date(Date.now() + 300_000),
+    },
+  });
+  const verify = await app.inject({
+    method: "POST",
+    url: `/public/${tenantSlug}/auth/verify`,
+    payload: { sessionId: session.id, code: "123456" },
+  });
+  assert.equal(verify.statusCode, 200);
+  const setCookie = String(verify.headers["set-cookie"]);
+  assert.match(setCookie, new RegExp(`Path=/public/${tenantSlug}`));
+  assert.match(setCookie, /HttpOnly/i);
+
+  const mine = await app.inject({
+    method: "GET",
+    url: `/public/${tenantSlug}/my-appointments`,
+    headers: { cookie: setCookie.split(";")[0] },
+  });
+  assert.equal(mine.statusCode, 200);
+  await prisma.customer
+    .delete({ where: { id: customer.id } })
+    .catch(() => undefined);
+});
+
+async function verifiedPortalSession(input: {
+  phone: string;
+  fullName?: string;
+  email?: string;
+}) {
+  const session = await prisma.customerAuthSession.create({
+    data: {
+      tenantId,
+      provider: "manual",
+      fullName: input.fullName ?? "",
+      email: input.email,
+      phone: input.phone,
+      otpCodeHash: await bcrypt.hash("654321", 4),
+      otpExpiresAt: new Date(Date.now() + 300_000),
+    },
+  });
+  return app.inject({
+    method: "POST",
+    url: `/public/${tenantSlug}/auth/verify`,
+    payload: { sessionId: session.id, code: "654321" },
+  });
+}
+
+test("verificar un telefono no permite apropiarse de la ficha de otro por su correo", async () => {
+  const victim = await prisma.customer.create({
+    data: {
+      tenantId,
+      fullName: "Victima",
+      phone: "+50372220011",
+      email: "victima@qa.local",
+    },
+  });
+  const verify = await verifiedPortalSession({
+    phone: "+50372220012",
+    fullName: "Atacante",
+    email: "victima@qa.local",
+  });
+  assert.equal(verify.statusCode, 200);
+  assert.notEqual(verify.json().customer.id, victim.id);
+  const untouched = await prisma.customer.findUniqueOrThrow({
+    where: { id: victim.id },
+  });
+  assert.equal(untouched.phone, "+50372220011");
+  assert.equal(untouched.fullName, "Victima");
+});
+
+test("un cliente que vuelve no reescribe su nombre y uno nuevo lo da despues", async () => {
+  await prisma.customer.create({
+    data: { tenantId, fullName: "Ya Registrada", phone: "+50372220013" },
+  });
+  const returning = await verifiedPortalSession({ phone: "+50372220013" });
+  assert.equal(returning.json().customer.fullName, "Ya Registrada");
+  assert.equal(returning.json().needsName, false);
+
+  const fresh = await verifiedPortalSession({ phone: "+50372220014" });
+  assert.equal(fresh.json().needsName, true);
+  const cookie = String(fresh.headers["set-cookie"]).split(";")[0];
+  const named = await app.inject({
+    method: "PATCH",
+    url: `/public/${tenantSlug}/me`,
+    headers: { cookie, "x-requested-with": "citas" },
+    payload: { fullName: "Cliente Nueva" },
+  });
+  assert.equal(named.statusCode, 200);
+  assert.equal(named.json().fullName, "Cliente Nueva");
+});
+
+test("la exportacion recorre todas las paginas sin perder ni repetir filas", async () => {
+  await prisma.customer.createMany({
+    data: Array.from({ length: 1_100 }, (_, index) => ({
+      tenantId,
+      fullName: `Masivo ${index}`,
+    })),
+  });
+  const total = await prisma.customer.count({ where: { tenantId } });
+  const response = await adminRequest("GET", "/tenants/me/export");
+  assert.equal(response.statusCode, 200);
+  const ids = response.json().customers.map((row: { id: string }) => row.id);
+  assert.equal(ids.length, total);
+  assert.equal(new Set(ids).size, total);
+  await prisma.customer.deleteMany({
+    where: { tenantId, fullName: { startsWith: "Masivo " } },
+  });
+});

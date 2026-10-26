@@ -6,6 +6,7 @@ import {
 } from "fastify-type-provider-zod";
 import { ZodError } from "zod";
 import { HttpError } from "../shared/errors.js";
+import { reportError } from "../shared/monitoring.js";
 import {
   isRetryableTransactionError,
   postgresErrorCode,
@@ -109,6 +110,11 @@ export function registerErrorHandler(app: FastifyInstance) {
       return reply.status(response.status).send(response.body);
     }
     request.log.error({ err: error }, "Error no controlado");
+    reportError(error, {
+      requestId: request.id,
+      route: request.routeOptions.url,
+      method: request.method,
+    });
     return reply
       .status(500)
       .send({ error: "INTERNAL_SERVER_ERROR", message: "Error interno" });

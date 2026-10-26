@@ -3,8 +3,14 @@ import axios from "axios";
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
 
+/**
+ * La sesion del cliente es una cookie httpOnly que la API limita a /public/{negocio}.
+ * X-Requested-With es la defensa anti-CSRF que la API exige en las escrituras.
+ */
 export const bookingApi = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
+  headers: { "X-Requested-With": "citas" },
 });
 
 /**

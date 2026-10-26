@@ -1,7 +1,8 @@
-import rateLimit from "@fastify/rate-limit";
+import { registerRateLimit } from "../../shared/rate-limit.js";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
+import { setSessionCookie } from "../../shared/session.js";
 import { scopeOf } from "../../shared/tenant-scope.js";
 import { issueAdminToken } from "../auth/auth.service.js";
 import { loadUserAccess } from "../auth/access.js";
@@ -95,7 +96,7 @@ export async function teamRoutes(app: FastifyInstance) {
 
   // Aceptar una invitacion es publico (llega por enlace): limite estricto por IP.
   await routes.register(async (invitations) => {
-    await invitations.register(rateLimit, {
+    await registerRateLimit(invitations, "invitations", {
       max: 20,
       timeWindow: "15 minutes",
     });
@@ -121,19 +122,21 @@ export async function teamRoutes(app: FastifyInstance) {
           }),
         },
       },
-      async (request) => {
+      async (request, reply) => {
         const { user, tenant } = await team.acceptInvitation(
           app.prisma,
           request.body,
           request.ip,
         );
         const access = await loadUserAccess(app.prisma, tenant.id, user.id);
+        const token = issueAdminToken(app.jwt, {
+          userId: user.id,
+          tenantId: tenant.id,
+          email: user.email,
+        });
+        setSessionCookie(request, reply, "admin", token);
         return {
-          token: issueAdminToken(app.jwt, {
-            userId: user.id,
-            tenantId: tenant.id,
-            email: user.email,
-          }),
+          token,
           user: {
             id: user.id,
             email: user.email,

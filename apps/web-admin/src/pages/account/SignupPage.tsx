@@ -147,8 +147,23 @@ export function SignupPage() {
             required
           />
           <span>
-            Acepto los términos del servicio y la política de privacidad,
-            incluido el tratamiento de los datos de mis clientes.
+            Acepto los{" "}
+            <a
+              href="/terminos"
+              target="_blank"
+              className="font-medium text-primary underline"
+            >
+              términos del servicio
+            </a>{" "}
+            y la{" "}
+            <a
+              href="/privacidad"
+              target="_blank"
+              className="font-medium text-primary underline"
+            >
+              política de privacidad
+            </a>
+            , incluido el tratamiento de los datos de mis clientes.
           </span>
         </label>
         <PrimaryButton loading={loading}>Crear cuenta</PrimaryButton>

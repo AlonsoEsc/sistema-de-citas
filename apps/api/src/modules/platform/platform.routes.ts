@@ -1,8 +1,9 @@
-import rateLimit from "@fastify/rate-limit";
+import { registerRateLimit } from "../../shared/rate-limit.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { currencySchema } from "../../shared/schemas.js";
+import { clearSessionCookie, setSessionCookie } from "../../shared/session.js";
 import {
   authenticatePlatformAdmin,
   requirePlatformAdmin,
@@ -20,7 +21,10 @@ function actorOf(request: FastifyRequest) {
 /** Panel de la plataforma (superadmin): negocios, pagos, planes y suspensiones. */
 export async function platformRoutes(app: FastifyInstance) {
   await app.register(async (login) => {
-    await login.register(rateLimit, { max: 5, timeWindow: "1 minute" });
+    await registerRateLimit(login, "platform-login", {
+      max: 5,
+      timeWindow: "1 minute",
+    });
     login.withTypeProvider<ZodTypeProvider>().post(
       "/platform/auth/login",
       {
@@ -29,8 +33,24 @@ export async function platformRoutes(app: FastifyInstance) {
           body: z.object({ email: z.email(), password: z.string().min(1) }),
         },
       },
-      async (request) =>
-        authenticatePlatformAdmin(app.prisma, app.jwt, request.body),
+      async (request, reply) => {
+        const session = await authenticatePlatformAdmin(
+          app.prisma,
+          app.jwt,
+          request.body,
+        );
+        setSessionCookie(request, reply, "platform", session.token);
+        return session;
+      },
+    );
+
+    login.post(
+      "/platform/auth/logout",
+      { schema: { tags } },
+      async (_request, reply) => {
+        clearSessionCookie(reply, "platform");
+        return { ok: true as const };
+      },
     );
   });
 

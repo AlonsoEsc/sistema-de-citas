@@ -1,10 +1,19 @@
 import { createPrismaClient } from "@citas/db";
+import { writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { setTimeout as sleep } from "node:timers/promises";
 import { env, sendMode } from "./config.js";
+import { flushMonitoring, initMonitoring, reportError } from "./monitoring.js";
 import { processOutbox } from "./outbox/process.js";
 import { enqueueScheduledNotifications } from "./scheduler/reminders.js";
 import { runScheduledReports } from "./scheduler/scheduled-reports.js";
+
+initMonitoring({
+  dsn: env.SENTRY_DSN,
+  environment: env.SENTRY_ENVIRONMENT ?? env.NODE_ENV,
+  release: env.APP_VERSION,
+  service: "worker",
+});
 
 const prisma = createPrismaClient({ connectionString: env.DATABASE_URL });
 const workerId = `${hostname()}:${process.pid}`;
@@ -17,8 +26,10 @@ async function tick() {
     });
     await runScheduledReports(prisma);
     await processOutbox(prisma, { workerId, batchSize: env.WORKER_BATCH_SIZE });
+    await writeFile(env.WORKER_HEARTBEAT_FILE, new Date().toISOString());
   } catch (error) {
     console.error("[worker] el ciclo fallo", error);
+    reportError(error);
   }
 }
 
@@ -32,6 +43,7 @@ async function run() {
     }).catch(() => undefined);
   }
   await prisma.$disconnect();
+  await flushMonitoring();
   console.log("[worker] detenido");
 }
 
@@ -42,5 +54,6 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 
 run().catch((error) => {
   console.error("[worker] error fatal", error);
-  process.exit(1);
+  reportError(error);
+  void flushMonitoring().finally(() => process.exit(1));
 });

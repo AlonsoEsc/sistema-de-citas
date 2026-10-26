@@ -1,5 +1,5 @@
-import rateLimit from "@fastify/rate-limit";
 import { INDUSTRIES, INDUSTRY_CODES } from "@citas/shared/industries";
+import { registerRateLimit } from "../../shared/rate-limit.js";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import {
   passwordSchema,
   timeZoneSchema,
 } from "../../shared/schemas.js";
+import { setSessionCookie } from "../../shared/session.js";
 import { SLUG_PATTERN } from "../../shared/slug.js";
 import { scopeOf } from "../../shared/tenant-scope.js";
 import { sendEmailVerification } from "../account/account.service.js";
@@ -31,7 +32,7 @@ export async function onboardingRoutes(app: FastifyInstance) {
 
   // Registro publico: limite estricto por IP contra creacion masiva de cuentas.
   await routes.register(async (signup) => {
-    await signup.register(rateLimit, { max: 5, timeWindow: "1 hour" });
+    await registerRateLimit(signup, "signup", { max: 5, timeWindow: "1 hour" });
     signup.withTypeProvider<ZodTypeProvider>().post(
       "/signup",
       {
@@ -73,13 +74,15 @@ export async function onboardingRoutes(app: FastifyInstance) {
         });
         await sendEmailVerification(app.prisma, user);
         const access = await loadUserAccess(app.prisma, tenant.id, user.id);
+        const token = issueAdminToken(app.jwt, {
+          userId: user.id,
+          tenantId: tenant.id,
+          email: user.email,
+        });
+        setSessionCookie(request, reply, "admin", token);
 
         return reply.status(201).send({
-          token: issueAdminToken(app.jwt, {
-            userId: user.id,
-            tenantId: tenant.id,
-            email: user.email,
-          }),
+          token,
           user: {
             id: user.id,
             email: user.email,

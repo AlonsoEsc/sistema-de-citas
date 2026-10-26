@@ -65,12 +65,14 @@ function withTenantData(model: string, data: unknown, tenantId: string): Row {
   return { ...row, tenantId };
 }
 
+/** Rol de base de datos con RLS (ver migracion row_level_security). */
+export const TENANT_DB_ROLE = "citas_app";
+
 /**
- * Devuelve un cliente de Prisma que filtra lecturas y fuerza `tenantId` en escrituras para
- * todos los modelos de TENANT_SCOPED_MODELS. Es la barrera que evita que un olvido de
- * `where: { tenantId }` exponga datos de otro negocio.
+ * Filtro de aplicacion: agrega `tenantId` a lecturas y escrituras de TENANT_SCOPED_MODELS.
+ * Evita que un olvido de `where: { tenantId }` exponga datos de otro negocio.
  */
-export function forTenant(prisma: PrismaClient, tenantId: string) {
+function withTenantFilter(prisma: PrismaClient, tenantId: string) {
   return prisma.$extends({
     name: "tenant-scope",
     query: {
@@ -103,6 +105,67 @@ export function forTenant(prisma: PrismaClient, tenantId: string) {
           return query(scoped as typeof args);
         },
       },
+    },
+  });
+}
+
+type FilteredClient = ReturnType<typeof withTenantFilter>;
+
+/** Fija rol y negocio para el resto de la transaccion actual (SET LOCAL). */
+function setTenantContext(
+  client: Pick<FilteredClient, "$executeRaw">,
+  tenantId: string,
+) {
+  return client.$executeRaw`SELECT set_config('role', ${TENANT_DB_ROLE}, true), set_config('app.tenant_id', ${tenantId}, true)`;
+}
+
+/**
+ * Cliente de Prisma de un negocio con dos barreras:
+ * 1. Filtro de aplicacion (withTenantFilter).
+ * 2. Row Level Security de PostgreSQL: cada consulta corre en una transaccion con el rol
+ *    `citas_app` y `app.tenant_id` fijados, asi la base rechaza filas de otro negocio
+ *    aunque el filtro tuviera un error.
+ *
+ * Las transacciones interactivas fijan el contexto una vez al inicio.
+ */
+export function forTenant(prisma: PrismaClient, tenantId: string) {
+  const filtered = withTenantFilter(prisma, tenantId);
+  const guarded = filtered.$extends({
+    name: "tenant-rls",
+    query: {
+      $allModels: {
+        async $allOperations({ args, query }) {
+          const [, result] = await filtered.$transaction([
+            setTenantContext(filtered, tenantId),
+            query(args),
+          ]);
+          return result;
+        },
+      },
+    },
+  });
+
+  type Guarded = typeof guarded;
+  const transaction: Guarded["$transaction"] = ((
+    work: unknown,
+    options?: Parameters<FilteredClient["$transaction"]>[1],
+  ) => {
+    if (typeof work !== "function") {
+      throw new Error(
+        "Usa transacciones interactivas con el cliente de un negocio",
+      );
+    }
+    return filtered.$transaction(async (tx) => {
+      await setTenantContext(tx, tenantId);
+      return (work as (client: typeof tx) => Promise<unknown>)(tx);
+    }, options);
+  }) as Guarded["$transaction"];
+
+  return new Proxy(guarded, {
+    get(target, property, receiver) {
+      return property === "$transaction"
+        ? transaction
+        : Reflect.get(target, property, receiver);
     },
   });
 }

@@ -1,3 +1,4 @@
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import { createPrismaClient, type PrismaClient } from "@citas/db";
@@ -7,7 +8,13 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import { randomUUID } from "node:crypto";
-import { apiDocsEnabled, corsOrigins, env, isProduction } from "./config.js";
+import {
+  apiDocsEnabled,
+  corsOrigins,
+  env,
+  isProduction,
+  trustProxy,
+} from "./config.js";
 import { accountRoutes } from "./modules/account/account.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { billingRoutes } from "./modules/billing/billing.routes.js";
@@ -25,7 +32,22 @@ import { appointmentRoutes } from "./modules/scheduling/appointments.routes.js";
 import { teamRoutes } from "./modules/team/team.routes.js";
 import { tenancyRoutes } from "./modules/tenancy/tenancy.routes.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
+import { closeRateLimitStore } from "./shared/rate-limit.js";
 import { registerOpenApi } from "./plugins/openapi.js";
+
+const READY_TIMEOUT_MS = 2_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number) {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Sin respuesta en ${ms} ms`)),
+        ms,
+      ).unref(),
+    ),
+  ]);
+}
 
 const SENSITIVE_QUERY = /([?&](?:token|apikey|api_key|access_token)=)[^&]*/gi;
 
@@ -41,6 +63,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
     createPrismaClient({ connectionString: env.DATABASE_URL });
 
   const app = Fastify({
+    trustProxy,
     genReqId: (request) =>
       String(request.headers["x-correlation-id"] ?? randomUUID()),
     logger: {
@@ -68,19 +91,41 @@ export async function buildApp(options: BuildAppOptions = {}) {
     if (!options.prisma) {
       await prisma.$disconnect();
     }
+    await closeRateLimitStore();
   });
 
-  await app.register(cors, { origin: corsOrigins });
+  await app.register(cors, {
+    origin: corsOrigins,
+    // Las sesiones del navegador viajan en cookies httpOnly (ver shared/session.ts).
+    credentials: true,
+    exposedHeaders: ["Content-Disposition"],
+  });
+  await app.register(cookie);
   await app.register(jwt, { secret: env.JWT_SECRET });
   if (apiDocsEnabled) {
     await registerOpenApi(app);
   }
   registerErrorHandler(app);
 
+  // Vivo: el proceso responde (lo usa Docker para reiniciarlo si se cuelga).
   app.get("/health", { schema: { hide: true } }, async () => ({
     ok: true,
+    version: env.APP_VERSION,
     timestamp: new Date().toISOString(),
   }));
+
+  // Listo: ademas llega a la base de datos (lo usan el proxy y el monitor de uptime).
+  app.get("/ready", { schema: { hide: true } }, async (_request, reply) => {
+    try {
+      await withTimeout(prisma.$queryRaw`SELECT 1`, READY_TIMEOUT_MS);
+      return { ok: true, version: env.APP_VERSION };
+    } catch (error) {
+      app.log.error({ err: error }, "La base de datos no responde");
+      return reply
+        .status(503)
+        .send({ ok: false, error: "DATABASE_UNAVAILABLE" });
+    }
+  });
 
   for (const routes of [
     authRoutes,

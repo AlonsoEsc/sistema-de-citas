@@ -86,11 +86,11 @@ export async function startOtp(
     );
   }
 
+  // El nombre es opcional aqui: si el telefono ya tiene ficha se conserva la existente, y
+  // si es nuevo se pide despues de verificar. Exigirlo antes revelaria si un numero es
+  // cliente de este negocio a quien no controla ese telefono.
   const profile = await socialProfileFor(input);
-  const fullName = profile?.fullName ?? input.fullName;
-  if (!fullName) {
-    throw badRequest("Nombre requerido", "NAME_REQUIRED");
-  }
+  const fullName = profile?.fullName ?? input.fullName ?? "";
 
   const entitlements = await loadEntitlements(db);
   const channel = isEnabled(entitlements, ENTITLEMENTS.whatsappNotifications)
@@ -189,16 +189,13 @@ export async function verifyOtp(
       throw badRequest("Codigo ya utilizado", "OTP_ALREADY_USED");
     }
 
+    // Solo el telefono esta verificado: buscar tambien por correo permitiria apropiarse
+    // de la ficha de otra persona escribiendo su correo.
     const existing = await tx.customer.findFirst({
-      where: {
-        OR: [
-          { phone: session.phone },
-          ...(session.email ? [{ email: session.email }] : []),
-        ],
-      },
+      where: { phone: session.phone },
     });
     const data = {
-      fullName: session.fullName,
+      fullName: session.fullName || existing?.fullName || "",
       phone: session.phone,
       email: session.email ?? existing?.email ?? undefined,
     };
@@ -227,5 +224,7 @@ export async function verifyOtp(
       phone: customer.phone,
       email: customer.email,
     },
+    /** Cliente nuevo que no dio su nombre: el portal se lo pide antes de reservar. */
+    needsName: !customer.fullName,
   };
 }

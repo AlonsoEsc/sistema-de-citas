@@ -4,7 +4,7 @@ import { defineConfig } from "tsup";
 // TypeScript. Las dependencias de node_modules quedan externas; Prisma y pg se marcan
 // explicitamente porque llegan como dependencias de @citas/db y no de la app.
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: ["src/index.ts", "src/healthcheck.ts"],
   format: ["esm"],
   platform: "node",
   target: "node22",

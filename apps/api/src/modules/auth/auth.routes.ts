@@ -1,7 +1,8 @@
-import rateLimit from "@fastify/rate-limit";
+import { registerRateLimit } from "../../shared/rate-limit.js";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
+import { clearSessionCookie, setSessionCookie } from "../../shared/session.js";
 import { authenticateAdmin, issueAdminToken } from "./auth.service.js";
 import { requireAuth } from "./guards.js";
 
@@ -19,7 +20,10 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Login y refresh comparten un limite estricto por IP contra fuerza bruta.
   await routes.register(async (limited) => {
-    await limited.register(rateLimit, { max: 10, timeWindow: "1 minute" });
+    await registerRateLimit(limited, "login", {
+      max: 10,
+      timeWindow: "1 minute",
+    });
     const scoped = limited.withTypeProvider<ZodTypeProvider>();
 
     scoped.post(
@@ -46,17 +50,19 @@ export async function authRoutes(app: FastifyInstance) {
           },
         },
       },
-      async (request) => {
+      async (request, reply) => {
         const { tenant, user, access } = await authenticateAdmin(
           app.prisma,
           request.body,
         );
+        const token = issueAdminToken(app.jwt, {
+          userId: user.id,
+          tenantId: tenant.id,
+          email: user.email,
+        });
+        setSessionCookie(request, reply, "admin", token);
         return {
-          token: issueAdminToken(app.jwt, {
-            userId: user.id,
-            tenantId: tenant.id,
-            email: user.email,
-          }),
+          token,
           user: {
             id: user.id,
             email: user.email,
@@ -79,15 +85,15 @@ export async function authRoutes(app: FastifyInstance) {
           response: { 200: z.object({ token: z.string() }) },
         },
       },
-      async (request) => {
+      async (request, reply) => {
         const auth = request.auth!;
-        return {
-          token: issueAdminToken(app.jwt, {
-            userId: auth.userId,
-            tenantId: auth.tenantId,
-            email: auth.email,
-          }),
-        };
+        const token = issueAdminToken(app.jwt, {
+          userId: auth.userId,
+          tenantId: auth.tenantId,
+          email: auth.email,
+        });
+        setSessionCookie(request, reply, "admin", token);
+        return { token };
       },
     );
   });
@@ -121,6 +127,9 @@ export async function authRoutes(app: FastifyInstance) {
   routes.post(
     "/auth/logout",
     { schema: { tags, response: { 200: z.object({ ok: z.literal(true) }) } } },
-    async () => ({ ok: true as const }),
+    async (_request, reply) => {
+      clearSessionCookie(reply, "admin");
+      return { ok: true as const };
+    },
   );
 }

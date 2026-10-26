@@ -32,6 +32,28 @@ export function useSaveBusiness() {
   });
 }
 
+/** Descarga el JSON con todos los datos del negocio (portabilidad). */
+export function useExportData() {
+  return useApiMutation({
+    mutationFn: async () => {
+      const response = await api.get<Blob>("/tenants/me/export", {
+        responseType: "blob",
+      });
+      const disposition = String(response.headers["content-disposition"] ?? "");
+      const filename =
+        /filename="([^"]+)"/.exec(disposition)?.[1] ?? "datos-del-negocio.json";
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    },
+    success: "Descarga lista.",
+    error: "No se pudo exportar.",
+  });
+}
+
 // ---- Avisos ----
 
 export type NotificationTemplate = {

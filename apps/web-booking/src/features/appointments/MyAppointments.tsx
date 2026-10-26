@@ -4,7 +4,6 @@ import { CalendarX2 } from "lucide-react";
 import { BackButton, Button, Notice } from "../../components/ui";
 import { bookingApi } from "../../lib/api";
 import { apiErrorMessage } from "../../lib/errors";
-import { authHeader, type BookingSession } from "../../lib/session";
 import {
   formatDateLabel,
   useTenantProfile,
@@ -20,12 +19,10 @@ const STATUS_LABEL: Partial<Record<CustomerAppointment["status"], string>> = {
 /** Proximas citas del cliente, con opcion de cancelar segun la politica del negocio. */
 export function MyAppointments({
   slug,
-  session,
   onBack,
   onBook,
 }: {
   slug: string;
-  session: BookingSession;
   onBack: () => void;
   onBook: () => void;
 }) {
@@ -44,20 +41,13 @@ export function MyAppointments({
       (
         await bookingApi.get<CustomerAppointment[]>(
           `/public/${slug}/my-appointments`,
-          {
-            headers: authHeader(session),
-          },
         )
       ).data,
   });
 
   const cancel = useMutation({
     mutationFn: async (appointmentId: string) =>
-      bookingApi.post(
-        `/public/${slug}/cancel`,
-        { appointmentId },
-        { headers: authHeader(session) },
-      ),
+      bookingApi.post(`/public/${slug}/cancel`, { appointmentId }),
     onSuccess: async () => {
       setConfirming(null);
       setNotice({

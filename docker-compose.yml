@@ -16,6 +16,7 @@ services:
       timeout: 3s
       retries: 20
 
+  # Opcional: limites de intentos compartidos (REDIS_URL=redis://localhost:6379).
   redis:
     image: redis:7-alpine
     container_name: citas_redis

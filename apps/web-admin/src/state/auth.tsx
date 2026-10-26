@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, onUnauthorized, setAuthToken } from "../lib/api";
+import { api, onUnauthorized } from "../lib/api";
 
 type SessionUser = {
   id: string;
@@ -16,8 +16,11 @@ type SessionUser = {
   permissions: string[];
 };
 
+/**
+ * Sesion del panel. El token vive en una cookie httpOnly que el navegador envia solo; aqui
+ * se guarda unicamente lo necesario para pintar la interfaz (usuario y negocio).
+ */
 export type UserSession = {
-  token: string;
   tenant: {
     id: string;
     slug: string;
@@ -44,69 +47,77 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 const STORAGE_KEY = "citas_admin_session";
 
-function readStoredSession(): UserSession | null {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    return null;
-  }
+function writeStoredSession(session: UserSession | null) {
   try {
-    const parsed = JSON.parse(raw) as UserSession;
-    if (!parsed.token || !Array.isArray(parsed.user?.permissions)) {
-      throw new Error("Sesion con formato anterior");
+    if (session) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
     }
-    return parsed;
   } catch {
-    localStorage.removeItem(STORAGE_KEY);
+    // Sin almacenamiento, la sesion sigue en memoria hasta recargar.
+  }
+}
+
+function readStoredSession(): UserSession | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw
+      ? (JSON.parse(raw) as UserSession & { token?: unknown })
+      : null;
+    if (!parsed || !Array.isArray(parsed.user?.permissions)) {
+      return null;
+    }
+    // Versiones anteriores guardaban el token aqui: se descarta.
+    const { tenant, user } = parsed;
+    return { tenant, user };
+  } catch {
     return null;
   }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<UserSession | null>(() => {
-    const stored = readStoredSession();
-    setAuthToken(stored?.token);
-    return stored;
-  });
+  const [session, setSession] = useState<UserSession | null>(readStoredSession);
+
+  const clear = useCallback(() => {
+    setSession(null);
+    writeStoredSession(null);
+  }, []);
 
   const logout = useCallback(() => {
-    setSession(null);
-    setAuthToken(undefined);
-    localStorage.removeItem(STORAGE_KEY);
-  }, []);
+    // La cookie es httpOnly: solo la API puede borrarla.
+    void api.post("/auth/logout").catch(() => undefined);
+    clear();
+  }, [clear]);
 
   const startSession = useCallback((next: UserSession) => {
-    const stored = {
-      token: next.token,
-      tenant: next.tenant,
-      user: next.user,
-    };
+    const stored = { tenant: next.tenant, user: next.user };
     setSession(stored);
-    setAuthToken(stored.token);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+    writeStoredSession(stored);
   }, []);
 
-  useEffect(() => onUnauthorized(logout), [logout]);
+  useEffect(() => onUnauthorized(clear), [clear]);
 
-  // Al recargar, confirma que el token sigue vigente y refresca roles/permisos.
-  const storedToken = session?.token;
+  // Al recargar, confirma con la API que la cookie sigue vigente y refresca permisos.
+  const userId = session?.user.id;
   useEffect(() => {
-    if (!storedToken) {
+    if (!userId) {
       return;
     }
     api
       .get<{ user: SessionUser }>("/auth/me")
       .then((response) => {
         setSession((current) => {
-          if (!current || current.token !== storedToken) {
+          if (!current) {
             return current;
           }
           const next = { ...current, user: response.data.user };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+          writeStoredSession(next);
           return next;
         });
       })
       .catch(() => undefined);
-  }, [storedToken]);
+  }, [userId]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

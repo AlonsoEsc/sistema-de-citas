@@ -17,7 +17,9 @@ El nombre comercial es configurable: `VITE_PRODUCT_NAME` en los frontends y
 | `apps/web-booking` | Portal público de reservas con verificación de teléfono por OTP           |
 | `packages/db`      | Schema de Prisma, migraciones, seed y cliente con aislamiento por tenant  |
 | `packages/shared`  | Código compartido entre apps                                              |
-| `infra/messaging`  | Evolution API (WhatsApp Cloud API) y Chatwoot para atención humana        |
+| `infra/messaging`  | Evolution API (WhatsApp Cloud API) y Chatwoot para desarrollo (WSL)       |
+| `infra/docker`     | Dockerfile multi-etapa y Caddyfile de producción                          |
+| `infra/deploy`     | Compose de producción, despliegue, respaldos (ver `docs/operations.md`)   |
 | `docs/`            | Endpoints, integración de WhatsApp, arquitectura y hoja de ruta           |
 
 ## Requisitos
@@ -43,6 +45,13 @@ npm run dev
 | Registro            | http://localhost:5173/registro      |
 | Panel de plataforma | http://localhost:5173/plataforma    |
 | Reservas            | http://localhost:5174/demo-barberia |
+
+### Arranque automático en Windows (opcional)
+
+`infra/messaging/start-messaging.ps1` levanta Evolution y Chatwoot en WSL y
+`infra/start-application.ps1` ejecuta `npm run dev` en segundo plano (si el puerto 4000 está
+libre). Se pueden lanzar al iniciar sesión desde un `.cmd` en la carpeta Inicio de Windows.
+En desarrollo el worker no envía mensajes reales (`WORKER_SEND_MODE=log`).
 
 El seed crea el negocio `demo-barberia` con tres usuarios de prueba (owner, staff y
 recepción). Las credenciales están en `packages/db/prisma/seed.ts` y el panel las precarga
@@ -82,15 +91,22 @@ aplicadas.
 
 ## Seguridad
 
-- Tokens de administración con tipo y caducidad; los de cliente del portal no sirven
-  contra la API de administración.
+- Sesiones del navegador en cookies `httpOnly`, `SameSite=Lax` y `Secure` (el token no
+  queda al alcance del JavaScript); las escrituras exigen además el encabezado
+  `X-Requested-With` contra CSRF. La cookie del portal se limita a `/public/{negocio}`.
+- Tokens con tipo y caducidad; los de cliente del portal no sirven contra la API de
+  administración. El portal solo identifica al cliente por el teléfono verificado.
+- Límites de intentos por IP, compartidos entre instancias con `REDIS_URL`.
 - Permisos por rol en cada ruta (`appointments.manage`, `customers.manage`,
   `settings.manage`, etc.). El rol `owner` tiene todos.
 - OTP limitado por IP y por teléfono; el código nunca se devuelve fuera de desarrollo.
 - En producción la API no arranca con `JWT_SECRET` débil y CORS queda restringido a
   `ADMIN_BASE_URL`, `PUBLIC_BOOKING_BASE_URL` o `CORS_ORIGINS`.
 - Todo acceso a datos de un negocio pasa por `forTenant()`, que filtra lecturas y fuerza
-  el `tenantId` en escrituras.
+  el `tenantId` en escrituras. Además, PostgreSQL aplica Row Level Security con el rol
+  `citas_app`: aunque el filtro fallara, la base no entrega filas de otro negocio.
+- Derechos de datos: el negocio exporta todo en JSON y elimina clientes; el cliente borra
+  sus datos desde el portal.
 - Las URLs de integraciones se validan contra SSRF (HTTPS y sin redes privadas en
   producción).
 - Fuera de producción el worker no contacta proveedores (`WORKER_SEND_MODE=log`).
@@ -98,6 +114,7 @@ aplicadas.
 ## Documentación
 
 - [Hoja de ruta](docs/roadmap.md)
+- [Operación: despliegue, respaldos, monitoreo](docs/operations.md)
 - [Arquitectura del backend](docs/architecture/backend.md)
 - [Endpoints de la API](docs/api/endpoints.md) (OpenAPI en `/docs`)
 - [Integración de WhatsApp y Chatwoot](docs/whatsapp-integration.md)

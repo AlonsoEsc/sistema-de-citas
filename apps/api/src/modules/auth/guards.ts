@@ -5,6 +5,7 @@ import {
   unauthorized,
 } from "../../shared/errors.js";
 import { tenantOf } from "../tenancy/tenant-context.js";
+import { verifySessionToken } from "../../shared/session.js";
 import { tenantScope } from "../../shared/tenant-scope.js";
 import { loadUserAccess } from "./access.js";
 import type { PermissionKey } from "./permissions.js";
@@ -15,10 +16,8 @@ import { ADMIN_TOKEN_TYPE, type AdminTokenPayload } from "./tokens.js";
  * peticion la identidad (`auth`) y el acceso a datos filtrado por tenant (`scope`).
  */
 export async function requireAuth(request: FastifyRequest) {
-  let payload: Partial<AdminTokenPayload> & { iat?: number };
-  try {
-    payload = await request.jwtVerify<AdminTokenPayload>();
-  } catch {
+  const payload = await verifySessionToken<AdminTokenPayload>(request, "admin");
+  if (!payload) {
     throw unauthorized();
   }
 

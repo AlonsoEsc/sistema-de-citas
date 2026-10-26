@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { bookingApi } from "./api";
 
+/** Datos del cliente para la interfaz; el token va en una cookie httpOnly. */
 export type BookingSession = {
-  token: string;
   customer: {
     id: string;
     fullName: string;
@@ -19,7 +19,7 @@ function readSession(slug: string): BookingSession | null {
   try {
     const raw = localStorage.getItem(storageKey(slug));
     const parsed = raw ? (JSON.parse(raw) as BookingSession) : null;
-    return parsed?.token ? parsed : null;
+    return parsed?.customer?.id ? { customer: parsed.customer } : null;
   } catch {
     return null;
   }
@@ -46,7 +46,7 @@ export function useBookingSession(slug: string, onExpired: () => void) {
     [slug],
   );
 
-  const clear = useCallback(() => {
+  const forget = useCallback(() => {
     setSession(null);
     try {
       localStorage.removeItem(storageKey(slug));
@@ -59,17 +59,19 @@ export function useBookingSession(slug: string, onExpired: () => void) {
     const id = bookingApi.interceptors.response.use(undefined, (error) => {
       const url = String(error?.config?.url ?? "");
       if (error?.response?.status === 401 && !url.includes("/auth/")) {
-        clear();
+        forget();
         onExpired();
       }
       return Promise.reject(error);
     });
     return () => bookingApi.interceptors.response.eject(id);
-  }, [clear, onExpired]);
+  }, [forget, onExpired]);
 
-  return { session, save, clear };
-}
+  /** Cerrar sesion: la API borra la cookie (el navegador no puede, es httpOnly). */
+  const clear = useCallback(() => {
+    void bookingApi.post(`/public/${slug}/auth/logout`).catch(() => undefined);
+    forget();
+  }, [forget, slug]);
 
-export function authHeader(session: BookingSession) {
-  return { Authorization: `Bearer ${session.token}` };
+  return { session, save, clear, forget };
 }

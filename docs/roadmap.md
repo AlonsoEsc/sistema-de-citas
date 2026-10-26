@@ -77,9 +77,26 @@ Pendiente de esta fase:
 - Responder conversaciones desde el panel (hoy se responde en WhatsApp o Chatwoot).
 - Personalización visual del portal por negocio (logo y color).
 
-## Fase 4: operación y legal (en paralelo)
+## Fase 4: operación y legal ✅
 
-- Imágenes Docker, staging, despliegue continuo.
-- Backups con prueba de restauración, monitoreo de errores y uptime.
-- Términos, política de privacidad, consentimiento y exportación/borrado de datos
-  (Ley de Protección de Datos Personales de El Salvador).
+- Row Level Security en PostgreSQL con el rol `citas_app` como segunda barrera entre
+  negocios; pruebas que demuestran que la base aísla sin el filtro de la aplicación.
+- Imagen Docker multi-etapa (api, worker, tools, web) y `docker compose` de producción con
+  Caddy (HTTPS automático, cabeceras de seguridad y CSP), Postgres privado y migraciones
+  antes de arrancar.
+- Despliegue continuo: `main` a staging y etiquetas `v*` a producción, con respaldo previo,
+  espera de `/ready` y vuelta atrás automática.
+- Respaldos diarios con retención y prueba semanal de restauración (también en CI).
+- `/health` y `/ready`, latido del worker, apagado ordenado y Sentry opcional sin datos
+  personales en los cuatro servicios.
+- Términos y política de privacidad (borrador configurable), exportación de datos del
+  negocio y eliminación de datos por el propio cliente desde el portal.
+- Manual de operación en `docs/operations.md`.
+
+Pendiente:
+
+- Revisión legal de los textos y datos del responsable.
+- Copia de respaldos fuera del servidor (documentada; depende del proveedor elegido).
+- Pasarela de cobro recurrente.
+- Imagen de la API y el worker (~890 MB): npm instala el CLI de Prisma y TypeScript como
+  dependencias de `@prisma/client`; separarlos reduciria la imagen a la mitad.

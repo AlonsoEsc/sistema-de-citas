@@ -24,6 +24,11 @@ import {
   type Customer,
 } from "./api";
 
+/** Quien verifico su telefono en el portal pero no termino de dar su nombre. */
+function displayName(customer: Customer) {
+  return customer.fullName || "Sin nombre";
+}
+
 const EMPTY = { fullName: "", phone: "", email: "", notes: "" };
 
 function CustomerDialog({
@@ -241,11 +246,11 @@ export function CustomersPage() {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary">
-                          {initials(customer.fullName)}
+                          {initials(displayName(customer))}
                         </span>
                         <div className="min-w-0">
                           <p className="truncate font-medium">
-                            {customer.fullName}
+                            {displayName(customer)}
                           </p>
                           {customer.notes && (
                             <p className="max-w-xs truncate text-xs text-ink-muted">
@@ -271,13 +276,13 @@ export function CustomersPage() {
                       {canManage && (
                         <div className="flex justify-end gap-1">
                           <IconButton
-                            label={`Editar a ${customer.fullName}`}
+                            label={`Editar a ${displayName(customer)}`}
                             onClick={() => setEditing({ customer })}
                           >
                             <Pencil className="size-4" />
                           </IconButton>
                           <IconButton
-                            label={`Eliminar a ${customer.fullName}`}
+                            label={`Eliminar a ${displayName(customer)}`}
                             className="hover:bg-danger-soft hover:text-danger"
                             onClick={() => setDeleting(customer)}
                           >

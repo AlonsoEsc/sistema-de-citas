@@ -1,3 +1,5 @@
+# Arranca el entorno de desarrollo (`npm run dev`) en segundo plano si la API no esta
+# corriendo. Pensado para el inicio de sesion de Windows; ver README.
 $ErrorActionPreference = "Stop"
 
 $projectDirectory = Split-Path -Parent $PSScriptRoot

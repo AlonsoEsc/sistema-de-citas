@@ -1,0 +1,103 @@
+name: Deploy
+
+# main -> staging; etiqueta vX.Y.Z -> produccion (con aprobacion del entorno "production").
+# Requiere, por entorno de GitHub (Settings > Environments):
+#   vars:    DEPLOY_HOST, DEPLOY_USER, DEPLOY_PATH, ADMIN_SITE, BOOKING_SITE, API_SITE,
+#            PRODUCT_NAME, LEGAL_NAME, LEGAL_EMAIL, LEGAL_ADDRESS, GOOGLE_CLIENT_ID,
+#            FACEBOOK_APP_ID, VITE_SENTRY_DSN
+#   secrets: DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS
+# Sin DEPLOY_HOST el flujo publica las imagenes y no despliega.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publicar api, worker y tools
+        run: |
+          prefix="$(echo "$IMAGE_PREFIX" | tr '[:upper:]' '[:lower:]')"
+          for target in api worker tools; do
+            docker buildx build --file infra/docker/Dockerfile --target "$target" \
+              --build-arg APP_VERSION=${{ steps.tag.outputs.tag }} \
+              --cache-from type=gha --cache-to type=gha,mode=max \
+              --tag "$prefix/$target:${{ steps.tag.outputs.tag }}" --push .
+          done
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_type == 'tag' && 'production' || 'staging' }}
+    env:
+      TAG: ${{ needs.images.outputs.tag }}
+      ENVIRONMENT: ${{ github.ref_type == 'tag' && 'production' || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # El panel y el portal llevan incrustados los dominios del entorno.
+      - name: Publicar web del entorno
+        run: |
+          prefix="$(echo "$IMAGE_PREFIX" | tr '[:upper:]' '[:lower:]')"
+          docker buildx build --file infra/docker/Dockerfile --target web \
+            --build-arg APP_VERSION="$TAG" \
+            --build-arg VITE_API_URL="https://${{ vars.API_SITE }}" \
+            --build-arg VITE_ADMIN_URL="https://${{ vars.ADMIN_SITE }}" \
+            --build-arg VITE_PRODUCT_NAME="${{ vars.PRODUCT_NAME }}" \
+            --build-arg VITE_SENTRY_DSN="${{ vars.VITE_SENTRY_DSN }}" \
+            --build-arg VITE_GOOGLE_CLIENT_ID="${{ vars.GOOGLE_CLIENT_ID }}" \
+            --build-arg VITE_FACEBOOK_APP_ID="${{ vars.FACEBOOK_APP_ID }}" \
+            --build-arg VITE_LEGAL_NAME="${{ vars.LEGAL_NAME }}" \
+            --build-arg VITE_LEGAL_EMAIL="${{ vars.LEGAL_EMAIL }}" \
+            --build-arg VITE_LEGAL_ADDRESS="${{ vars.LEGAL_ADDRESS }}" \
+            --cache-from type=gha --cache-to type=gha,mode=max \
+            --tag "$prefix/web:$TAG-$ENVIRONMENT" --push .
+      - name: Desplegar en el servidor
+        if: vars.DEPLOY_HOST != ''
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          TARGET: ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh_opts="-i ~/.ssh/id_deploy -o BatchMode=yes"
+          # Compose, scripts y Caddyfile van con cada version; el .env vive solo en el servidor.
+          scp $ssh_opts -r infra/deploy/docker-compose.yml infra/deploy/deploy.sh infra/deploy/backup "$TARGET:$DEPLOY_PATH/"
+          ssh $ssh_opts "$TARGET" "cd '$DEPLOY_PATH' && sh deploy.sh '$TAG' '$TAG-$ENVIRONMENT'"

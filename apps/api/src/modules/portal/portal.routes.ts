@@ -1,8 +1,9 @@
-import rateLimit from "@fastify/rate-limit";
+import { registerRateLimit } from "../../shared/rate-limit.js";
 import { industryProfile } from "@citas/shared/industries";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
+import { clearSessionCookie, setSessionCookie } from "../../shared/session.js";
 import { scopeOf } from "../../shared/tenant-scope.js";
 import { tenantOf } from "../tenancy/tenant-context.js";
 import { ACTIVE_APPOINTMENT_STATUSES } from "../scheduling/availability.service.js";
@@ -11,6 +12,7 @@ import {
   cancelAppointmentByCustomer,
   createAppointment,
 } from "../scheduling/appointment.service.js";
+import { deleteCustomer } from "../customers/customers.service.js";
 import { verifyOtp, startOtp } from "./otp.service.js";
 import {
   requireBookingOpen,
@@ -48,7 +50,10 @@ export async function portalRoutes(app: FastifyInstance) {
   // Verificacion de telefono: limite estricto por IP (y por telefono dentro del servicio).
   await app.register(
     async (auth) => {
-      await auth.register(rateLimit, { max: 20, timeWindow: "15 minutes" });
+      await registerRateLimit(auth, "portal-otp", {
+        max: 20,
+        timeWindow: "15 minutes",
+      });
       auth.addHook("preHandler", resolvePortalTenant);
       const routes = auth.withTypeProvider<ZodTypeProvider>();
 
@@ -91,7 +96,73 @@ export async function portalRoutes(app: FastifyInstance) {
             }),
           },
         },
-        async (request) => verifyOtp(scopeOf(request), app.jwt, request.body),
+        async (request, reply) => {
+          const session = await verifyOtp(
+            scopeOf(request),
+            app.jwt,
+            request.body,
+          );
+          setSessionCookie(
+            request,
+            reply,
+            "booking",
+            session.token,
+            request.params.tenantSlug,
+          );
+          return session;
+        },
+      );
+
+      routes.post(
+        "/auth/logout",
+        { schema: { tags, params: tenantParams } },
+        async (request, reply) => {
+          clearSessionCookie(reply, "booking", request.params.tenantSlug);
+          return { ok: true as const };
+        },
+      );
+
+      routes.patch(
+        "/me",
+        {
+          preHandler: [requirePortalCustomer],
+          schema: {
+            tags,
+            security,
+            params: tenantParams,
+            summary: "El cliente actualiza su nombre",
+            body: z.object({ fullName: z.string().trim().min(2).max(80) }),
+          },
+        },
+        async (request) => {
+          const customer = await scopeOf(request).db.customer.update({
+            where: { id: request.customerAuth!.customerId },
+            data: { fullName: request.body.fullName },
+          });
+          return { id: customer.id, fullName: customer.fullName };
+        },
+      );
+
+      // Derecho de supresion: el cliente borra sus datos sin depender del negocio.
+      routes.post(
+        "/me/delete",
+        {
+          preHandler: [requirePortalCustomer],
+          schema: {
+            tags,
+            security,
+            params: tenantParams,
+            summary: "El cliente elimina sus datos personales de este negocio",
+          },
+        },
+        async (request) => {
+          const result = await deleteCustomer(
+            scopeOf(request),
+            request.customerAuth!.customerId,
+            null,
+          );
+          return { ok: true as const, anonymized: result.anonymized };
+        },
       );
     },
     { prefix: "/public/:tenantSlug" },
@@ -99,7 +170,10 @@ export async function portalRoutes(app: FastifyInstance) {
 
   await app.register(
     async (portal) => {
-      await portal.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+      await registerRateLimit(portal, "portal", {
+        max: 100,
+        timeWindow: "1 minute",
+      });
       portal.addHook("preHandler", resolvePortalTenant);
       const routes = portal.withTypeProvider<ZodTypeProvider>();
 

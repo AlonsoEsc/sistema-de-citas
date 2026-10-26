@@ -18,7 +18,8 @@
     "./industries": "./src/industries.ts",
     "./access": "./src/access.ts",
     "./reports": "./src/reports.ts",
-    "./billing": "./src/billing.ts"
+    "./billing": "./src/billing.ts",
+    "./legal": "./src/legal.ts"
   },
   "dependencies": {
     "dayjs": "^1.11.13"

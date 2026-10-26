@@ -4,7 +4,31 @@ import { Button } from "../../components/ui/button";
 import { Alert, Field, SelectField } from "../../components/ui/form";
 import { Card, CardHeader } from "../../components/ui/surface";
 import { useTenant } from "../../state/tenant";
-import { useSaveBusiness } from "./api";
+import { Download } from "lucide-react";
+import { useExportData, useSaveBusiness } from "./api";
+
+/** Portabilidad: el negocio puede llevarse sus datos cuando quiera. */
+function DataCard() {
+  const exportData = useExportData();
+  return (
+    <Card>
+      <CardHeader
+        title="Tus datos"
+        description="Descarga una copia completa de tu negocio: equipo, servicios, clientes, citas, avisos y pagos. No incluye contraseñas ni credenciales."
+        actions={
+          <Button
+            variant="secondary"
+            icon={<Download className="size-4" />}
+            loading={exportData.isPending}
+            onClick={() => exportData.mutate(undefined)}
+          >
+            Exportar (JSON)
+          </Button>
+        }
+      />
+    </Card>
+  );
+}
 
 /** Zonas y monedas de la region; si el negocio usa otra, se conserva como opcion. */
 const TIMEZONES = [
@@ -81,117 +105,124 @@ export function BusinessTab() {
   };
 
   return (
-    <form onSubmit={submit} className="space-y-6">
-      <Card>
-        <CardHeader
-          title="Perfil del negocio"
-          description="Así te ven tus clientes en el portal y en los mensajes."
-        />
-        <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <Field
-            label="Nombre del negocio"
-            required
-            minLength={2}
-            maxLength={80}
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
+    <div className="space-y-6">
+      <form onSubmit={submit} className="space-y-6">
+        <Card>
+          <CardHeader
+            title="Perfil del negocio"
+            description="Así te ven tus clientes en el portal y en los mensajes."
           />
-          <SelectField
-            label="Rubro"
-            value={form.industry}
-            onChange={(event) =>
-              setForm({ ...form, industry: event.target.value })
-            }
-          >
-            {INDUSTRIES.map((industry) => (
-              <option key={industry.code} value={industry.code}>
-                {industry.label}
-              </option>
-            ))}
-          </SelectField>
-          <SelectField
-            label="Zona horaria"
-            value={form.timezone}
-            onChange={(event) =>
-              setForm({ ...form, timezone: event.target.value })
-            }
-          >
-            {withCurrent(TIMEZONES, tenant.timezone).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </SelectField>
-          <SelectField
-            label="Moneda"
-            value={form.currency}
-            onChange={(event) =>
-              setForm({ ...form, currency: event.target.value })
-            }
-          >
-            {withCurrent(CURRENCIES, tenant.currency).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </SelectField>
-        </div>
-        {form.industry !== tenant.industry && (
-          <div className="px-5 pb-5">
-            <Alert tone="info">
-              El rubro cambia los nombres del panel (por ejemplo, “Pacientes” en
-              lugar de “Clientes”). No modifica tus servicios ni tus datos.
-            </Alert>
-          </div>
-        )}
-      </Card>
-
-      <Card>
-        <CardHeader
-          title="Reglas de reserva"
-          description="Se aplican en el portal y en WhatsApp."
-        />
-        <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <SelectField
-            label="Los clientes pueden cancelar"
-            value={form.cancelPolicyMinutes}
-            onChange={(event) =>
-              setForm({
-                ...form,
-                cancelPolicyMinutes: Number(event.target.value),
-              })
-            }
-          >
-            {[...new Set([...CANCEL_OPTIONS, form.cancelPolicyMinutes])]
-              .sort((a, b) => a - b)
-              .map((minutes) => (
-                <option key={minutes} value={minutes}>
-                  {hoursLabel(minutes)}
+          <div className="grid gap-4 p-5 sm:grid-cols-2">
+            <Field
+              label="Nombre del negocio"
+              required
+              minLength={2}
+              maxLength={80}
+              value={form.name}
+              onChange={(event) =>
+                setForm({ ...form, name: event.target.value })
+              }
+            />
+            <SelectField
+              label="Rubro"
+              value={form.industry}
+              onChange={(event) =>
+                setForm({ ...form, industry: event.target.value })
+              }
+            >
+              {INDUSTRIES.map((industry) => (
+                <option key={industry.code} value={industry.code}>
+                  {industry.label}
                 </option>
               ))}
-          </SelectField>
-          <Field
-            label="Reservas con anticipación de hasta (días)"
-            type="number"
-            min={1}
-            max={365}
-            required
-            value={form.bookingWindowDays}
-            onChange={(event) =>
-              setForm({
-                ...form,
-                bookingWindowDays: Number(event.target.value),
-              })
-            }
-          />
-        </div>
-      </Card>
+            </SelectField>
+            <SelectField
+              label="Zona horaria"
+              value={form.timezone}
+              onChange={(event) =>
+                setForm({ ...form, timezone: event.target.value })
+              }
+            >
+              {withCurrent(TIMEZONES, tenant.timezone).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              label="Moneda"
+              value={form.currency}
+              onChange={(event) =>
+                setForm({ ...form, currency: event.target.value })
+              }
+            >
+              {withCurrent(CURRENCIES, tenant.currency).map(
+                ([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ),
+              )}
+            </SelectField>
+          </div>
+          {form.industry !== tenant.industry && (
+            <div className="px-5 pb-5">
+              <Alert tone="info">
+                El rubro cambia los nombres del panel (por ejemplo, “Pacientes”
+                en lugar de “Clientes”). No modifica tus servicios ni tus datos.
+              </Alert>
+            </div>
+          )}
+        </Card>
 
-      <div className="flex justify-end">
-        <Button type="submit" loading={save.isPending} disabled={readOnly}>
-          Guardar cambios
-        </Button>
-      </div>
-    </form>
+        <Card>
+          <CardHeader
+            title="Reglas de reserva"
+            description="Se aplican en el portal y en WhatsApp."
+          />
+          <div className="grid gap-4 p-5 sm:grid-cols-2">
+            <SelectField
+              label="Los clientes pueden cancelar"
+              value={form.cancelPolicyMinutes}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  cancelPolicyMinutes: Number(event.target.value),
+                })
+              }
+            >
+              {[...new Set([...CANCEL_OPTIONS, form.cancelPolicyMinutes])]
+                .sort((a, b) => a - b)
+                .map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    {hoursLabel(minutes)}
+                  </option>
+                ))}
+            </SelectField>
+            <Field
+              label="Reservas con anticipación de hasta (días)"
+              type="number"
+              min={1}
+              max={365}
+              required
+              value={form.bookingWindowDays}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  bookingWindowDays: Number(event.target.value),
+                })
+              }
+            />
+          </div>
+        </Card>
+
+        <div className="flex justify-end">
+          <Button type="submit" loading={save.isPending} disabled={readOnly}>
+            Guardar cambios
+          </Button>
+        </div>
+      </form>
+      <DataCard />
+    </div>
   );
 }

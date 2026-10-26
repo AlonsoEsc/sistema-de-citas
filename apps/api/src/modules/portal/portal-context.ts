@@ -1,5 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import { forbidden, notFound, unauthorized } from "../../shared/errors.js";
+import { verifySessionToken } from "../../shared/session.js";
 import { tenantScope } from "../../shared/tenant-scope.js";
 import {
   BOOKING_CUSTOMER_TOKEN_TYPE,
@@ -33,20 +34,28 @@ export async function requireBookingOpen(request: FastifyRequest) {
 
 /** Exige un token de cliente verificado por OTP y emitido para este mismo negocio. */
 export async function requirePortalCustomer(request: FastifyRequest) {
-  let payload: Partial<BookingCustomerTokenPayload>;
-  try {
-    payload = await request.jwtVerify<BookingCustomerTokenPayload>();
-  } catch {
+  const payload = await verifySessionToken<BookingCustomerTokenPayload>(
+    request,
+    "booking",
+  );
+  if (
+    !payload ||
+    payload.type !== BOOKING_CUSTOMER_TOKEN_TYPE ||
+    !payload.customerId ||
+    payload.tenantId !== request.tenant?.id
+  ) {
     throw unauthorized(
       "Necesitas verificar tu telefono para continuar",
       "BOOKING_AUTH_REQUIRED",
     );
   }
-  if (
-    payload.type !== BOOKING_CUSTOMER_TOKEN_TYPE ||
-    !payload.customerId ||
-    payload.tenantId !== request.tenant?.id
-  ) {
+  // Un cliente que borro sus datos (o que el negocio elimino) ya no tiene sesion valida,
+  // aunque su token aun no haya vencido. Los clientes verificados siempre tienen telefono.
+  const customer = await request.scope!.db.customer.findUnique({
+    where: { id: payload.customerId },
+    select: { phone: true },
+  });
+  if (!customer?.phone) {
     throw unauthorized(
       "Necesitas verificar tu telefono para continuar",
       "BOOKING_AUTH_REQUIRED",

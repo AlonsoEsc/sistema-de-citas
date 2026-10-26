@@ -78,6 +78,11 @@ export function PlatformApp() {
     storePlatformSession(null);
     setSession(null);
   };
+  // Cerrar sesion borra la cookie en la API (el navegador no puede borrar una httpOnly).
+  const signOut = () => {
+    void platformApi.post("/platform/auth/logout").catch(() => undefined);
+    logout();
+  };
 
   // Una sesion vencida (2 h) devuelve al login de plataforma.
   useEffect(() => {
@@ -117,7 +122,7 @@ export function PlatformApp() {
             <span>{session.user.email}</span>
             <button
               type="button"
-              onClick={logout}
+              onClick={signOut}
               className="font-medium text-primary hover:text-primary-hover"
             >
               Salir

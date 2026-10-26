@@ -1,5 +1,6 @@
 import { notFoundIfMissing } from "../../shared/prisma-errors.js";
 import { recordAudit } from "../audit/audit.service.js";
+import { ACTIVE_APPOINTMENT_STATUSES } from "../scheduling/availability.service.js";
 import type { TenantScope } from "../../shared/tenant-scope.js";
 import type { CustomerInput } from "./customers.schemas.js";
 
@@ -38,12 +39,15 @@ export const ANONYMIZED_CUSTOMER_NAME = "Cliente eliminado";
 /**
  * Elimina los datos personales de un cliente (derecho de supresion). Si tiene citas, el
  * registro se anonimiza para no romper el historial ni los reportes; si no, se borra.
- * En ambos casos se borran sus conversaciones, sesiones de acceso y avisos pendientes.
+ * En ambos casos se borran sus conversaciones, sesiones de acceso y avisos pendientes, y
+ * sus citas futuras se cancelan (ya no habria a quien atender ni avisar).
+ *
+ * `actorUserId` es null cuando lo pide el propio cliente desde el portal.
  */
 export async function deleteCustomer(
   { db, tenantId }: TenantScope,
   customerId: string,
-  actorUserId: string,
+  actorUserId: string | null,
 ) {
   const customer = await db.customer
     .findUniqueOrThrow({
@@ -68,6 +72,14 @@ export async function deleteCustomer(
         where: { to: { in: contacts }, status: "pending" },
       });
     }
+    await tx.appointment.updateMany({
+      where: {
+        customerId,
+        status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
+        startAt: { gt: new Date() },
+      },
+      data: { status: "cancelled" },
+    });
     if (anonymized) {
       await tx.customer.update({
         where: { id: customerId },
@@ -89,6 +101,7 @@ export async function deleteCustomer(
       action: anonymized ? "customer.anonymized" : "customer.deleted",
       entityType: "customer",
       entityId: customerId,
+      metadata: { requestedBy: actorUserId ? "business" : "customer" },
     });
   });
   return { ok: true as const, deletedId: customerId, anonymized };

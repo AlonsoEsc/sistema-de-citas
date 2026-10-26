@@ -2,6 +2,7 @@ import type { PrismaClient } from "@citas/db";
 import bcrypt from "bcryptjs";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { unauthorized } from "../../shared/errors.js";
+import { verifySessionToken } from "../../shared/session.js";
 import {
   PLATFORM_TOKEN_TYPE,
   type PlatformTokenPayload,
@@ -41,13 +42,11 @@ export async function authenticatePlatformAdmin(
 
 /** Exige una sesion de superadmin vigente de un usuario que sigue siendo superadmin. */
 export async function requirePlatformAdmin(request: FastifyRequest) {
-  let payload: Partial<PlatformTokenPayload> & { iat?: number };
-  try {
-    payload = await request.jwtVerify<PlatformTokenPayload>();
-  } catch {
-    throw unauthorized();
-  }
-  if (payload.type !== PLATFORM_TOKEN_TYPE || !payload.userId) {
+  const payload = await verifySessionToken<PlatformTokenPayload>(
+    request,
+    "platform",
+  );
+  if (!payload || payload.type !== PLATFORM_TOKEN_TYPE || !payload.userId) {
     throw unauthorized();
   }
   const user = await request.server.prisma.user.findUnique({

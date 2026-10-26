@@ -1,7 +1,8 @@
-import rateLimit from "@fastify/rate-limit";
+import { registerRateLimit } from "../../shared/rate-limit.js";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
+import { setSessionCookie } from "../../shared/session.js";
 import { okResponseSchema, passwordSchema } from "../../shared/schemas.js";
 import { issueAdminToken } from "../auth/auth.service.js";
 import { requireAuth } from "../auth/guards.js";
@@ -19,7 +20,7 @@ const tokenBody = z.object({ token: z.string().min(20).max(200) });
 export async function accountRoutes(app: FastifyInstance) {
   // Rutas publicas con enlaces por correo: limite estricto contra abuso.
   await app.register(async (publicAccount) => {
-    await publicAccount.register(rateLimit, {
+    await registerRateLimit(publicAccount, "account", {
       max: 10,
       timeWindow: "15 minutes",
     });
@@ -95,7 +96,7 @@ export async function accountRoutes(app: FastifyInstance) {
         response: { 200: z.object({ ok: z.literal(true), token: z.string() }) },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const auth = request.auth!;
       await changePassword(
         app.prisma,
@@ -103,14 +104,13 @@ export async function accountRoutes(app: FastifyInstance) {
         request.ip,
       );
       // Las sesiones anteriores quedan revocadas; esta recibe un token nuevo.
-      return {
-        ok: true as const,
-        token: issueAdminToken(app.jwt, {
-          userId: auth.userId,
-          tenantId: auth.tenantId,
-          email: auth.email,
-        }),
-      };
+      const token = issueAdminToken(app.jwt, {
+        userId: auth.userId,
+        tenantId: auth.tenantId,
+        email: auth.email,
+      });
+      setSessionCookie(request, reply, "admin", token);
+      return { ok: true as const, token };
     },
   );
 }

@@ -16,7 +16,6 @@ import { useAuth } from "../../state/auth";
 import { useOnboarding } from "../overview/api";
 
 function ChangePasswordCard() {
-  const { session, startSession } = useAuth();
   const toast = useToast();
   const [form, setForm] = useState({
     currentPassword: "",
@@ -28,16 +27,13 @@ function ChangePasswordCard() {
   const change = useMutation({
     mutationFn: async () =>
       (
-        await api.post<{ token: string }>("/auth/password/change", {
+        await api.post("/auth/password/change", {
           currentPassword: form.currentPassword,
           newPassword: form.newPassword,
         })
       ).data,
-    onSuccess: ({ token }) => {
-      // El cambio cierra las demas sesiones; esta continua con el token nuevo.
-      if (session) {
-        startSession({ ...session, token });
-      }
+    // La API cierra las demas sesiones y renueva la cookie de esta.
+    onSuccess: () => {
       setForm({ currentPassword: "", newPassword: "", confirm: "" });
       toast.success("Contraseña actualizada. Cerramos tus otras sesiones.");
     },

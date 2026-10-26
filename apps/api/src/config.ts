@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import type { FastifyServerOptions } from "fastify";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
@@ -24,6 +25,24 @@ const envSchema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
   PORT: z.coerce.number().default(4000),
+  // Version desplegada (commit o etiqueta); la imagen Docker la recibe al construirse.
+  APP_VERSION: z.string().default("dev"),
+  // Detras de un proxy (Caddy) la IP real llega en X-Forwarded-For. Valores: "false", un
+  // numero de saltos ("1") o IPs/rangos de confianza separados por comas.
+  TRUST_PROXY: z.string().default("false"),
+  // Contadores de limites compartidos entre instancias (opcional con una sola instancia).
+  REDIS_URL: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => value || undefined),
+  // Reporte de errores (opcional). Sin DSN no se envia nada.
+  SENTRY_DSN: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => value || undefined),
+  SENTRY_ENVIRONMENT: z.string().optional(),
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(12),
   ENCRYPTION_KEY: z.string().min(32),
@@ -74,6 +93,16 @@ if (env.NODE_ENV === "production") {
 }
 
 export const isProduction = env.NODE_ENV === "production";
+
+/** Valor de `trustProxy` de Fastify; sin proxy confiable, X-Forwarded-For se ignora. */
+export const trustProxy: FastifyServerOptions["trustProxy"] =
+  env.TRUST_PROXY === "true"
+    ? true
+    : env.TRUST_PROXY === "false"
+      ? false
+      : /^\d+$/.test(env.TRUST_PROXY)
+        ? (_address: string, hop: number) => hop < Number(env.TRUST_PROXY)
+        : env.TRUST_PROXY.split(",").map((value) => value.trim());
 
 export const apiDocsEnabled =
   process.env.API_DOCS_ENABLED === undefined

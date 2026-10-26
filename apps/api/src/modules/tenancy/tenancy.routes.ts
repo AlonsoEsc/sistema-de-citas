@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import { INDUSTRY_CODES, industryProfile } from "@citas/shared/industries";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -9,6 +10,7 @@ import { recordAudit } from "../audit/audit.service.js";
 import { adminAccess } from "../auth/guards.js";
 import { PERMISSIONS } from "../auth/permissions.js";
 import { bookingUrlFor } from "../onboarding/onboarding.service.js";
+import { exportTenantJson } from "./export.service.js";
 import { tenantOf } from "./tenant-context.js";
 
 const tags = ["negocio"];
@@ -131,6 +133,36 @@ export async function tenancyRoutes(app: FastifyInstance) {
         create: { tenantId, ...data },
         update: data,
       });
+    },
+  );
+
+  // Portabilidad: el dueno descarga todos los datos de su negocio en JSON.
+  routes.get(
+    "/tenants/me/export",
+    {
+      preHandler: adminAccess(PERMISSIONS.settingsManage),
+      schema: {
+        tags,
+        security,
+        summary: "Exporta los datos del negocio (sin secretos)",
+      },
+    },
+    async (request, reply) => {
+      const scope = scopeOf(request);
+      const tenant = await tenantOf(request);
+      await recordAudit(scope.db, {
+        tenantId: scope.tenantId,
+        actorUserId: request.auth!.userId,
+        action: "tenant.data_exported",
+        entityType: "Tenant",
+        entityId: scope.tenantId,
+        ip: request.ip,
+      });
+      const filename = `${tenant.slug}-${new Date().toISOString().slice(0, 10)}.json`;
+      return reply
+        .type("application/json; charset=utf-8")
+        .header("Content-Disposition", `attachment; filename="${filename}"`)
+        .send(Readable.from(exportTenantJson(scope)));
     },
   );
 
