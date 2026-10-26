@@ -6,14 +6,12 @@ import {
 } from "fastify-type-provider-zod";
 import { ZodError } from "zod";
 import { HttpError } from "../shared/errors.js";
-import { asRecord } from "../shared/json.js";
+import {
+  isRetryableTransactionError,
+  postgresErrorCode,
+} from "../shared/prisma-errors.js";
 
 const POSTGRES_EXCLUSION_VIOLATION = "23P01";
-
-function driverErrorCode(error: Prisma.PrismaClientKnownRequestError) {
-  const adapterError = asRecord(asRecord(error.meta).driverAdapterError);
-  return asRecord(adapterError.cause).code;
-}
 
 type ErrorBody = { error: string; message: string; detail?: unknown };
 
@@ -51,12 +49,23 @@ function toHttpResponse(
     };
   }
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    if (driverErrorCode(error) === POSTGRES_EXCLUSION_VIOLATION) {
+    if (postgresErrorCode(error) === POSTGRES_EXCLUSION_VIOLATION) {
       return {
         status: 409,
         body: {
           error: "SCHEDULE_CONFLICT",
           message: "El profesional ya tiene una cita en ese horario",
+        },
+      };
+    }
+    // Si una transaccion agoto sus reintentos por concurrencia, el cliente puede repetir.
+    if (isRetryableTransactionError(error)) {
+      return {
+        status: 409,
+        body: {
+          error: "CONCURRENT_UPDATE",
+          message:
+            "Otra operacion modifico estos datos al mismo tiempo. Intenta de nuevo.",
         },
       };
     }

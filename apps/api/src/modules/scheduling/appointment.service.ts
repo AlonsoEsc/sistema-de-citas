@@ -8,7 +8,10 @@ import {
   type AppointmentEvent,
 } from "@citas/shared/notifications";
 import { badRequest, conflict, notFound } from "../../shared/errors.js";
-import { notFoundIfMissing } from "../../shared/prisma-errors.js";
+import {
+  notFoundIfMissing,
+  retryOnTransactionConflict,
+} from "../../shared/prisma-errors.js";
 import type { TenantScope, TenantTxScope } from "../../shared/tenant-scope.js";
 import {
   enabledNotificationChannels,
@@ -137,68 +140,74 @@ export async function createAppointment(
   tenant: TenantContext,
   input: CreateAppointmentInput,
 ) {
-  return scope.db.$transaction(async (db) => {
-    const tx = { tenantId: scope.tenantId, db };
-    const staff = await db.staff.findFirst({
-      where: { id: input.staffId, active: true },
-      select: { id: true },
-    });
-    if (!staff) {
-      throw notFound(
-        "Profesional no existe o esta inactivo",
-        "STAFF_NOT_FOUND",
+  // Dos reservas del mismo horario pueden chocar en la restriccion de exclusion; al
+  // reintentar, la que perdio ve la cita ya confirmada y recibe SCHEDULE_CONFLICT.
+  return retryOnTransactionConflict(() =>
+    scope.db.$transaction(async (db) => {
+      const tx = { tenantId: scope.tenantId, db };
+      const staff = await db.staff.findFirst({
+        where: { id: input.staffId, active: true },
+        select: { id: true },
+      });
+      if (!staff) {
+        throw notFound(
+          "Profesional no existe o esta inactivo",
+          "STAFF_NOT_FOUND",
+        );
+      }
+      const { services, durationMinutes, priceCents } = await resolveServices(
+        tx,
+        input.serviceIds,
       );
-    }
-    const { services, durationMinutes, priceCents } = await resolveServices(
-      tx,
-      input.serviceIds,
-    );
-    if (input.actor === "customer") {
-      await assertBookableSlot(tx, tenant, input);
-    }
+      if (input.actor === "customer") {
+        await assertBookableSlot(tx, tenant, input);
+      }
 
-    const customer = await findOrCreateCustomer(tx, input);
-    if (input.enforceSingleActiveByPhone && customer.phone) {
-      await assertNoActiveAppointmentForPhone(tx, customer.phone);
-    }
-    const endAt = new Date(input.startAt.getTime() + durationMinutes * 60_000);
-    await assertNoOverlap(tx, {
-      staffId: input.staffId,
-      startAt: input.startAt,
-      endAt,
-    });
-
-    const appointment = await db.appointment.create({
-      data: {
-        tenantId: scope.tenantId,
-        customerId: customer.id,
+      const customer = await findOrCreateCustomer(tx, input);
+      if (input.enforceSingleActiveByPhone && customer.phone) {
+        await assertNoActiveAppointmentForPhone(tx, customer.phone);
+      }
+      const endAt = new Date(
+        input.startAt.getTime() + durationMinutes * 60_000,
+      );
+      await assertNoOverlap(tx, {
         staffId: input.staffId,
-        status: input.source === "portal" ? "confirmed" : "pending",
         startAt: input.startAt,
         endAt,
-        priceCents,
-        currency: tenant.currency,
-        source: input.source,
-        services: {
-          create: services.map((service) => ({
-            serviceId: service.id,
-            durationMinutes: service.durationMinutes,
-            priceCents: service.priceCents,
-          })),
-        },
-      },
-      include: appointmentDetails,
-    });
+      });
 
-    await queueAppointmentNotifications(
-      tx,
-      tenant,
-      appointment,
-      APPOINTMENT_EVENTS.created,
-      { channels: input.notificationChannels },
-    );
-    return appointment;
-  });
+      const appointment = await db.appointment.create({
+        data: {
+          tenantId: scope.tenantId,
+          customerId: customer.id,
+          staffId: input.staffId,
+          status: input.source === "portal" ? "confirmed" : "pending",
+          startAt: input.startAt,
+          endAt,
+          priceCents,
+          currency: tenant.currency,
+          source: input.source,
+          services: {
+            create: services.map((service) => ({
+              serviceId: service.id,
+              durationMinutes: service.durationMinutes,
+              priceCents: service.priceCents,
+            })),
+          },
+        },
+        include: appointmentDetails,
+      });
+
+      await queueAppointmentNotifications(
+        tx,
+        tenant,
+        appointment,
+        APPOINTMENT_EVENTS.created,
+        { channels: input.notificationChannels },
+      );
+      return appointment;
+    }),
+  );
 }
 
 async function findAppointment({ db }: TenantTxScope, appointmentId: string) {
@@ -220,56 +229,58 @@ export async function rescheduleAppointment(
     notificationChannels?: NotificationChannel[];
   },
 ) {
-  return scope.db.$transaction(async (db) => {
-    const tx = { tenantId: scope.tenantId, db };
-    const appointment = await findAppointment(tx, appointmentId);
-    if (
-      appointment.status === "cancelled" ||
-      appointment.status === "completed"
-    ) {
-      throw badRequest(
-        "No puedes reagendar una cita finalizada o cancelada",
-        "APPOINTMENT_NOT_ACTIVE",
+  return retryOnTransactionConflict(() =>
+    scope.db.$transaction(async (db) => {
+      const tx = { tenantId: scope.tenantId, db };
+      const appointment = await findAppointment(tx, appointmentId);
+      if (
+        appointment.status === "cancelled" ||
+        appointment.status === "completed"
+      ) {
+        throw badRequest(
+          "No puedes reagendar una cita finalizada o cancelada",
+          "APPOINTMENT_NOT_ACTIVE",
+        );
+      }
+      if (options.actor === "customer") {
+        await assertBookableSlot(tx, tenant, {
+          staffId: appointment.staffId,
+          serviceIds: appointment.services.map((item) => item.serviceId),
+          startAt: newStartAt,
+          excludeAppointmentId: appointment.id,
+        });
+      }
+
+      const duration = appointment.services.reduce(
+        (sum, item) => sum + item.durationMinutes,
+        0,
       );
-    }
-    if (options.actor === "customer") {
-      await assertBookableSlot(tx, tenant, {
+      const newEndAt = new Date(newStartAt.getTime() + duration * 60_000);
+      await assertNoOverlap(tx, {
         staffId: appointment.staffId,
-        serviceIds: appointment.services.map((item) => item.serviceId),
         startAt: newStartAt,
-        excludeAppointmentId: appointment.id,
+        endAt: newEndAt,
+        excludeId: appointment.id,
       });
-    }
 
-    const duration = appointment.services.reduce(
-      (sum, item) => sum + item.durationMinutes,
-      0,
-    );
-    const newEndAt = new Date(newStartAt.getTime() + duration * 60_000);
-    await assertNoOverlap(tx, {
-      staffId: appointment.staffId,
-      startAt: newStartAt,
-      endAt: newEndAt,
-      excludeId: appointment.id,
-    });
-
-    const updated = await db.appointment.update({
-      where: { id: appointment.id },
-      data: { startAt: newStartAt, endAt: newEndAt, status: "confirmed" },
-      include: appointmentDetails,
-    });
-    await queueAppointmentNotifications(
-      tx,
-      tenant,
-      updated,
-      APPOINTMENT_EVENTS.confirmed,
-      {
-        channels: options.notificationChannels,
-        idempotencySuffix: newStartAt.toISOString(),
-      },
-    );
-    return updated;
-  });
+      const updated = await db.appointment.update({
+        where: { id: appointment.id },
+        data: { startAt: newStartAt, endAt: newEndAt, status: "confirmed" },
+        include: appointmentDetails,
+      });
+      await queueAppointmentNotifications(
+        tx,
+        tenant,
+        updated,
+        APPOINTMENT_EVENTS.confirmed,
+        {
+          channels: options.notificationChannels,
+          idempotencySuffix: newStartAt.toISOString(),
+        },
+      );
+      return updated;
+    }),
+  );
 }
 
 export async function cancelAppointmentByCustomer(
