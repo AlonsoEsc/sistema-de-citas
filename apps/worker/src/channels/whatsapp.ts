@@ -46,6 +46,19 @@ async function whatsappConfigFor(
     : undefined;
 }
 
+/** Plantilla de autenticacion de Meta: el codigo va en el cuerpo y en el boton de copiar. */
+function authenticationComponents(code: string) {
+  return [
+    { type: "body", parameters: [{ type: "text", text: code }] },
+    {
+      type: "button",
+      sub_type: "url",
+      index: "0",
+      parameters: [{ type: "text", text: code }],
+    },
+  ];
+}
+
 /**
  * Envia por Evolution: con plantilla aprobada por Meta si la notificacion tiene una asociada
  * (obligatorio fuera de la ventana de 24 h), o como texto libre dentro de la ventana.
@@ -64,6 +77,9 @@ async function sendEvolution(
         language: template.language ?? "es",
         components:
           template.components ??
+          (template.kind === "authentication"
+            ? authenticationComponents(String(payload.code ?? ""))
+            : undefined) ??
           (template.parameterOrder?.length
             ? [
                 {

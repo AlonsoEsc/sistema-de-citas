@@ -10,10 +10,7 @@ import bcrypt from "bcryptjs";
 import { conflict } from "../../shared/errors.js";
 import { RESERVED_SLUGS, slugify } from "../../shared/slug.js";
 import { recordAudit } from "../audit/audit.service.js";
-import {
-  TRIAL_PLAN_CODE,
-  trialEndDate,
-} from "../billing/subscription-status.js";
+import { TRIAL_PLAN_CODE, trialEndDate } from "@citas/shared/billing";
 
 export type ProvisionTenantInput = {
   businessName: string;
@@ -128,6 +125,7 @@ export async function provisionTenant(
             eventType: template.eventType,
             subject: template.subject,
             body: template.body,
+            variablesJson: template.providerTemplate,
           })),
         },
       },

@@ -3,7 +3,7 @@ import { badRequest, notFound } from "../../shared/errors.js";
 import { notFoundIfMissing } from "../../shared/prisma-errors.js";
 import { recordAudit } from "../audit/audit.service.js";
 import { nextBillingPeriod } from "../billing/billing-period.js";
-import { evaluateSubscription } from "../billing/subscription-status.js";
+import { evaluateSubscription } from "@citas/shared/billing";
 
 type Actor = { userId: string; ip?: string };
 

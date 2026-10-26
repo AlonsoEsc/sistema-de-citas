@@ -65,6 +65,7 @@ export async function templateRoutes(app: FastifyInstance) {
             name: z.string().trim().min(1),
             language: z.string().trim().min(2).default("es"),
             parameterOrder: z.array(z.string().trim().min(1)).default([]),
+            kind: z.enum(["standard", "authentication"]).default("standard"),
           }),
         }),
       },

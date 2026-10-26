@@ -32,6 +32,12 @@ export type ProviderTemplateConfig = {
   evolution?: {
     name: string;
     language?: string;
+    /**
+     * "authentication": plantilla de codigo de verificacion de Meta (cuerpo y boton de copiar
+     * codigo llevan el mismo parametro). Es la unica forma de entregar un OTP por WhatsApp a
+     * quien no escribio en las ultimas 24 h.
+     */
+    kind?: "standard" | "authentication";
     parameterOrder?: string[];
     components?: unknown[];
   };

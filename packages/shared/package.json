@@ -16,7 +16,9 @@
     "./crypto": "./src/crypto.ts",
     "./integrations": "./src/integrations.ts",
     "./industries": "./src/industries.ts",
-    "./access": "./src/access.ts"
+    "./access": "./src/access.ts",
+    "./reports": "./src/reports.ts",
+    "./billing": "./src/billing.ts"
   },
   "dependencies": {
     "dayjs": "^1.11.13"

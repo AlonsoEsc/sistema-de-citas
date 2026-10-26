@@ -10,10 +10,18 @@ export type NotificationPayload = {
   [key: string]: unknown;
 };
 
+export type EmailAttachment = {
+  filename: string;
+  type: string;
+  /** Contenido en base64. */
+  content: string;
+};
+
 export type RenderedMessage = {
   subject: string;
   body: string;
   providerTemplate?: ProviderTemplateConfig;
+  attachments?: EmailAttachment[];
 };
 
 const DEFAULT_SUBJECT = "Notificación de cita";
@@ -64,9 +72,13 @@ export async function renderMessage(
       ? (variables as ProviderTemplateConfig)
       : undefined;
 
+  const attachments = Array.isArray(payload.attachments)
+    ? (payload.attachments as EmailAttachment[])
+    : undefined;
   const body = template?.body ?? payload.message ?? payload.body;
   if (body) {
     return {
+      attachments,
       body: interpolate(body, payload),
       subject: interpolate(
         template?.subject ?? payload.subject ?? DEFAULT_SUBJECT,

@@ -4,6 +4,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { env, sendMode } from "./config.js";
 import { processOutbox } from "./outbox/process.js";
 import { enqueueScheduledNotifications } from "./scheduler/reminders.js";
+import { runScheduledReports } from "./scheduler/scheduled-reports.js";
 
 const prisma = createPrismaClient({ connectionString: env.DATABASE_URL });
 const workerId = `${hostname()}:${process.pid}`;
@@ -14,6 +15,7 @@ async function tick() {
     await enqueueScheduledNotifications(prisma, {
       pollIntervalMs: env.WORKER_POLL_INTERVAL_MS,
     });
+    await runScheduledReports(prisma);
     await processOutbox(prisma, { workerId, batchSize: env.WORKER_BATCH_SIZE });
   } catch (error) {
     console.error("[worker] el ciclo fallo", error);

@@ -27,6 +27,16 @@ export async function sendEmail({
         from: { email: env.EMAIL_FROM, name: env.EMAIL_FROM_NAME },
         subject: message.subject,
         content: [{ type: "text/plain", value: message.body }],
+        ...(message.attachments?.length
+          ? {
+              attachments: message.attachments.map((file) => ({
+                filename: file.filename,
+                type: file.type,
+                content: file.content,
+                disposition: "attachment",
+              })),
+            }
+          : {}),
       }),
     },
   );

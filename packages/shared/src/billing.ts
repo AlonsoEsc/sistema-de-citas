@@ -1,11 +1,46 @@
-import type { Subscription } from "@citas/db";
-
 export const TRIAL_DAYS = 14;
 export const TRIAL_PLAN_CODE = "negocio";
 /** Dias de gracia tras vencer un periodo pagado antes de pasar a solo lectura. */
 export const PAST_DUE_GRACE_DAYS = 3;
 
 const DAY_MS = 86_400_000;
+
+/** Funciones que se habilitan por plan (Plan.featuresJson) o por excepcion del negocio. */
+export const ENTITLEMENTS = {
+  emailNotifications: "notifications.email.enabled",
+  smsNotifications: "notifications.sms.enabled",
+  whatsappNotifications: "notifications.whatsapp.enabled",
+  advancedReports: "reports.advanced.enabled",
+  whatsappAssistant: "whatsapp.assistant.enabled",
+} as const;
+
+/** Funciones del plan con las excepciones del negocio por encima: { clave: { enabled } }. */
+export type EntitlementMap = Record<string, unknown>;
+
+export function mergeEntitlements(
+  planFeatures: unknown,
+  overrides: Array<{ key: string; valueJson: unknown }>,
+): EntitlementMap {
+  const base =
+    planFeatures &&
+    typeof planFeatures === "object" &&
+    !Array.isArray(planFeatures)
+      ? (planFeatures as EntitlementMap)
+      : {};
+  return {
+    ...base,
+    ...Object.fromEntries(overrides.map((row) => [row.key, row.valueJson])),
+  };
+}
+
+export function isEnabled(
+  entitlements: EntitlementMap,
+  key: string,
+  defaultValue = false,
+) {
+  const value = entitlements[key] as { enabled?: boolean } | undefined;
+  return value?.enabled ?? defaultValue;
+}
 
 export type SubscriptionState =
   | "trialing"
@@ -28,10 +63,12 @@ export type SubscriptionEvaluation = {
   accessUntil: Date | null;
 };
 
-type SubscriptionDates = Pick<
-  Subscription,
-  "status" | "trialEndsAt" | "currentPeriodEnd"
->;
+/** Campos de la suscripcion que deciden el acceso (forma de Subscription en la base). */
+type SubscriptionDates = {
+  status: "trialing" | "active" | "past_due" | "canceled";
+  trialEndsAt: Date | null;
+  currentPeriodEnd: Date | null;
+};
 
 export function evaluateSubscription(
   subscription: SubscriptionDates | null | undefined,

@@ -86,10 +86,31 @@ export type DefaultTemplate = {
   eventType: string;
   subject?: string;
   body: string;
+  /** Plantilla aprobada por Meta con la que se envia por WhatsApp (ver ProviderTemplateConfig). */
+  providerTemplate?: {
+    evolution: {
+      name: string;
+      language: string;
+      kind: "standard" | "authentication";
+    };
+  };
 };
 
 /** Plantillas con las que nace todo negocio; el negocio las edita desde Ajustes. */
 export const DEFAULT_NOTIFICATION_TEMPLATES: DefaultTemplate[] = [
+  {
+    // Meta solo entrega codigos por WhatsApp con una plantilla de autenticacion aprobada.
+    channel: "whatsapp",
+    eventType: "auth.otp.requested",
+    body: "Tu código de verificación es {{code}}. Vence en {{expiresInMinutes}} minutos.",
+    providerTemplate: {
+      evolution: {
+        name: "codigo_verificacion",
+        language: "es",
+        kind: "authentication",
+      },
+    },
+  },
   {
     channel: "email",
     eventType: APPOINTMENT_EVENTS.created,

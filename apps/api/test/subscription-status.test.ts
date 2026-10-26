@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   evaluateSubscription,
   PAST_DUE_GRACE_DAYS,
-} from "../src/modules/billing/subscription-status.js";
+} from "@citas/shared/billing";
 
 const now = new Date("2030-06-15T12:00:00Z");
 const days = (count: number) => new Date(now.getTime() + count * 86_400_000);

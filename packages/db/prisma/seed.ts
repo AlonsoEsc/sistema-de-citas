@@ -179,8 +179,17 @@ async function main() {
     };
     await prisma.notificationTemplate.upsert({
       where: { tenantId_channel_eventType: key },
-      create: { ...key, subject: template.subject, body: template.body },
-      update: { subject: template.subject, body: template.body },
+      create: {
+        ...key,
+        subject: template.subject,
+        body: template.body,
+        variablesJson: template.providerTemplate,
+      },
+      update: {
+        subject: template.subject,
+        body: template.body,
+        variablesJson: template.providerTemplate,
+      },
     });
   }
 

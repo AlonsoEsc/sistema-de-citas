@@ -7,7 +7,7 @@ import {
   evaluateSubscription,
   type AccountAccess,
   type SubscriptionEvaluation,
-} from "../billing/subscription-status.js";
+} from "@citas/shared/billing";
 import { mergeEntitlements, type EntitlementMap } from "./entitlements.js";
 
 const DEFAULT_CANCEL_POLICY_MINUTES = 120;
