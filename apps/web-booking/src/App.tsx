@@ -7,7 +7,6 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import dayjs from "dayjs";
 import { AnimatePresence, motion } from "motion/react";
 import {
   AlertCircle,
@@ -19,6 +18,15 @@ import {
   Smartphone,
 } from "lucide-react";
 import { bookingApi, tenantSlug } from "./lib/api";
+import {
+  formatCurrency,
+  formatDateLabel,
+  formatSlotTime,
+  todayForTenant,
+  TenantProfileProvider,
+  useTenantProfile,
+  type TenantProfile,
+} from "./lib/tenant-profile";
 import type {
   AvailabilityResponse,
   CustomerAppointment,
@@ -88,25 +96,6 @@ declare global {
   }
 }
 
-const SESSION_KEY = `booking_session_${tenantSlug}`;
-
-function formatDateLabel(value: string) {
-  return new Date(value).toLocaleString("es-MX", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatCurrency(priceCents: number) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-  }).format(priceCents / 100);
-}
-
 function Notice({
   tone,
   children,
@@ -146,8 +135,10 @@ function Notice({
   );
 }
 
-function BookingContent() {
+function BookingContent({ tenantSlug }: { tenantSlug: string }) {
   const queryClient = useQueryClient();
+  const profile = useTenantProfile();
+  const SESSION_KEY = `booking_session_${tenantSlug}`;
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as
     | string
     | undefined;
@@ -162,7 +153,7 @@ function BookingContent() {
   );
   const [serviceId, setServiceId] = useState("");
   const [staffId, setStaffId] = useState("");
-  const [date, setDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [date, setDate] = useState(() => todayForTenant(profile));
   const [slot, setSlot] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -472,7 +463,7 @@ function BookingContent() {
     setServiceId("");
     setStaffId("");
     setSlot("");
-    setDate(dayjs().format("YYYY-MM-DD"));
+    setDate(todayForTenant(profile));
     setView("book");
   }
 
@@ -481,7 +472,7 @@ function BookingContent() {
     setView("auth");
     setServiceId("");
     setStaffId("");
-    setDate(dayjs().format("YYYY-MM-DD"));
+    setDate(todayForTenant(profile));
     setSlot("");
     setAuthSessionId(null);
     setOtpCode("");
@@ -536,10 +527,10 @@ function BookingContent() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white">
-                {PRODUCT_NAME}
+                {profile.name}
               </h1>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                Portal de Reservas
+                Reservas en línea · {PRODUCT_NAME}
               </p>
             </div>
           </div>
@@ -902,7 +893,7 @@ function BookingContent() {
                                 : "border-[#2a2a2a] bg-[#1a1a1a] text-gray-300 hover:bg-[#222]"
                             }`}
                           >
-                            {dayjs(item.startAt).format("HH:mm")}
+                            {formatSlotTime(item.startAt, profile)}
                           </button>
                         ))}
                       </div>
@@ -920,7 +911,7 @@ function BookingContent() {
                       {selectedService && (
                         <span>
                           {selectedService.name} ·{" "}
-                          {formatCurrency(selectedService.priceCents)}
+                          {formatCurrency(selectedService.priceCents, profile)}
                         </span>
                       )}
                       {selectedService && selectedStaff && <span> · </span>}
@@ -984,7 +975,7 @@ function BookingContent() {
                               .join(", ")}
                           </h4>
                           <p className="mt-0.5 text-[10px] font-bold text-gray-400">
-                            {formatDateLabel(appointment.startAt)}
+                            {formatDateLabel(appointment.startAt, profile)}
                           </p>
                           <p className="text-[10px] font-medium text-gray-500">
                             Especialista: {appointment.staff.displayName}
@@ -1020,12 +1011,71 @@ function BookingContent() {
   );
 }
 
+function PortalMessage({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid min-h-screen place-items-center bg-[#0a0a0a] px-4 text-center font-sans text-gray-200">
+      <div className="max-w-md space-y-3">
+        <h1 className="text-xl font-bold text-white">{title}</h1>
+        <p className="text-sm text-gray-400">{children}</p>
+      </div>
+    </div>
+  );
+}
+
+function TenantPortal({ slug }: { slug: string }) {
+  const profileQuery = useQuery({
+    queryKey: ["tenant-profile", slug],
+    retry: false,
+    queryFn: async () =>
+      (await bookingApi.get<TenantProfile>(`/public/${slug}/profile`)).data,
+  });
+
+  if (profileQuery.isPending) {
+    return (
+      <PortalMessage title="Cargando…">Un momento, por favor.</PortalMessage>
+    );
+  }
+  if (profileQuery.isError || !profileQuery.data) {
+    return (
+      <PortalMessage title="Negocio no encontrado">
+        Revisa el enlace que te compartió el negocio.
+      </PortalMessage>
+    );
+  }
+  if (!profileQuery.data.bookingOpen) {
+    return (
+      <PortalMessage title={profileQuery.data.name}>
+        Este negocio no está recibiendo reservas en línea en este momento.
+        Comunícate directamente con ellos.
+      </PortalMessage>
+    );
+  }
+  return (
+    <TenantProfileProvider profile={profileQuery.data}>
+      <BookingContent tenantSlug={slug} />
+    </TenantProfileProvider>
+  );
+}
+
 export function App() {
   const queryClient = useMemo(() => new QueryClient(), []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BookingContent />
+      {tenantSlug ? (
+        <TenantPortal slug={tenantSlug} />
+      ) : (
+        <PortalMessage title="Reserva tu cita">
+          Abre el enlace de reservas que te compartió el negocio (por ejemplo,
+          reservas.tudominio.com/nombre-del-negocio).
+        </PortalMessage>
+      )}
     </QueryClientProvider>
   );
 }

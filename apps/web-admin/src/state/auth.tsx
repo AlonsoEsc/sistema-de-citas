@@ -16,7 +16,7 @@ type SessionUser = {
   permissions: string[];
 };
 
-type UserSession = {
+export type UserSession = {
   token: string;
   tenant: {
     id: string;
@@ -35,6 +35,8 @@ type LoginInput = {
 type AuthContextValue = {
   session: UserSession | null;
   login: (input: LoginInput) => Promise<void>;
+  /** Abre sesion con la respuesta de registro o de aceptar una invitacion. */
+  startSession: (session: UserSession) => void;
   logout: () => void;
   can: (permission: string) => boolean;
 };
@@ -72,6 +74,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
+  const startSession = useCallback((next: UserSession) => {
+    const stored = {
+      token: next.token,
+      tenant: next.tenant,
+      user: next.user,
+    };
+    setSession(stored);
+    setAuthToken(stored.token);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+  }, []);
+
   useEffect(() => onUnauthorized(logout), [logout]);
 
   // Al recargar, confirma que el token sigue vigente y refresca roles/permisos.
@@ -100,16 +113,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       async login(input) {
         const response = await api.post<UserSession>("/auth/login", input);
-        setSession(response.data);
-        setAuthToken(response.data.token);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(response.data));
+        startSession(response.data);
       },
+      startSession,
       logout,
       can(permission) {
         return session?.user.permissions.includes(permission) ?? false;
       },
     }),
-    [session, logout],
+    [session, logout, startSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

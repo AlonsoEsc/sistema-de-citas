@@ -36,15 +36,37 @@ npm run db:seed
 npm run dev
 ```
 
-| Servicio | URL                   |
-| -------- | --------------------- |
-| API      | http://localhost:4000 |
-| Panel    | http://localhost:5173 |
-| Reservas | http://localhost:5174 |
+| Servicio            | URL                                 |
+| ------------------- | ----------------------------------- |
+| API (y `/docs`)     | http://localhost:4000               |
+| Panel del negocio   | http://localhost:5173               |
+| Registro            | http://localhost:5173/registro      |
+| Panel de plataforma | http://localhost:5173/plataforma    |
+| Reservas            | http://localhost:5174/demo-barberia |
 
 El seed crea el negocio `demo-barberia` con tres usuarios de prueba (owner, staff y
 recepción). Las credenciales están en `packages/db/prisma/seed.ts` y el panel las precarga
 solo en modo desarrollo.
+
+## Modelo comercial
+
+- **Registro autónomo** en `/registro`: crea el negocio con 14 días de prueba en el plan
+  Negocio, servicios sugeridos según el rubro y plantillas de mensajes.
+- **Planes** Básico, Negocio y Clínica (19/39/79 USD al mes) con límite de profesionales,
+  cupo mensual de WhatsApp y funciones. Al vencer la prueba o el pago (con 3 días de
+  gracia) el panel queda en solo lectura y el portal deja de recibir reservas.
+- **Cobro manual** desde el panel de plataforma: registrar un pago extiende la
+  suscripción. Está preparado para conectar una pasarela (`Subscription.provider`).
+- **Rubro configurable**: el vocabulario (cliente/paciente, servicio/tratamiento...) y los
+  servicios sugeridos salen de `packages/shared/src/industries.ts`.
+- **Portal por URL**: cada negocio recibe reservas en `{PUBLIC_BOOKING_BASE_URL}/{slug}`.
+  El servidor que publique `web-booking` debe redirigir cualquier ruta a `index.html`.
+
+Los administradores de plataforma no se registran por la web:
+
+```bash
+npm run platform:admin -- --email ops@tudominio.com --name "Operaciones"
+```
 
 ## Scripts
 

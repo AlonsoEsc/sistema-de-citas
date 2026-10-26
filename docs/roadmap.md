@@ -31,22 +31,34 @@ Pendiente de esta fase, movido a fases siguientes:
 - OTP por WhatsApp con plantilla de autenticación aprobada por Meta; fuera de la ventana de
   24 h el texto libre no se entrega (fase 2).
 
-## Fase 2: núcleo SaaS
+## Fase 2: núcleo SaaS ✅
 
-- Rubro configurable por negocio (barbería, salón, clínica, odontología, etc.):
-  vocabulario (cliente/paciente, servicio/tratamiento), plantillas y datos iniciales.
-- Registro autónomo con onboarding guiado y prueba gratuita.
-- Suscripciones: planes, límites por plan (profesionales, mensajes de WhatsApp),
-  cobros fallidos y cancelación.
-- Panel de superadmin para operar la plataforma.
-- Invitación de usuarios, recuperación de contraseña y verificación de correo.
-- URL de reservas por negocio (`/:slug`) en lugar de un build por tenant.
-- Moneda y locale por negocio en la interfaz (la API ya usa zona horaria y moneda del negocio).
-- Bitácora de auditoría.
+- Rubro configurable (11 rubros) con vocabulario y servicios sugeridos.
+- Registro autónomo con prueba de 14 días; guía de primeros pasos (`/onboarding`).
+- Suscripciones (prueba, activa, pago pendiente, vencida, cancelada) y pagos; planes con
+  límites de profesionales y cupo de WhatsApp; solo lectura al vencer.
+- Panel y API de plataforma (superadmin): negocios, pagos manuales, cambio de plan,
+  extensión de prueba, suspensión y edición de planes.
+- Equipo: invitaciones, roles y desactivación; verificación de correo y recuperación de
+  contraseña; cambiar la contraseña cierra las demás sesiones.
+- Portal de reservas por URL (`/{slug}`) con zona horaria, moneda e idioma del negocio.
+- Reportes programados reales (correo con CSV o WhatsApp) y OTP con plantilla de
+  autenticación de Meta. Bitácora de auditoría.
+
+Pendiente de esta fase:
+
+- Pasarela de cobro recurrente (Wompi u otra): el modelo ya separa `provider` y
+  `externalId`; falta el webhook de pagos y el cobro automático.
+- Pantallas del panel para equipo, consumo del plan y cambio de contraseña: la API existe
+  (`/team`, `/billing/usage`, `/auth/password/change`), la interfaz llega en la fase 3.
+- Páginas públicas de términos y política de privacidad (el registro ya exige aceptarlas).
 
 ## Fase 3: frontend
 
-- Rutas reales por sección y `ProAdminApp` dividido por funcionalidad.
+- Rutas reales por sección y `ProAdminApp` dividido por funcionalidad (el enrutador ya
+  existe para cuenta y plataforma).
+- Vocabulario del rubro en todo el panel y el portal (`/tenants/me` y `/profile` ya lo
+  entregan).
 - Una sola librería de iconos y componentes base propios.
 - Estados de carga, vacío y error en todas las pantallas.
 - Retirar las simulaciones restantes (portal de clientes, conexión de WhatsApp,

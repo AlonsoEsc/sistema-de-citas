@@ -3,6 +3,9 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
+// Mensajes de validacion en espanol para toda la API (los ve el usuario final).
+z.config(z.locales.es());
+
 const currentDir = dirname(fileURLToPath(import.meta.url));
 // Las variables reales del entorno (las del servidor o del proceso) siempre ganan.
 // apps/api/.env solo sobrescribe valores que vengan del .env de la raiz.

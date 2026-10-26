@@ -28,6 +28,7 @@ import type {
   Staff,
 } from "../lib/types";
 import { PRODUCT_NAME } from "../config/brand";
+import { AccountBanner } from "../components/AccountBanner";
 
 type ApiTemplate = {
   id: string;
@@ -660,6 +661,7 @@ export function ProAdminApp() {
       hiddenTabs={hiddenTabs}
     >
       <>
+        <AccountBanner />
         {isLoading && (
           <div className="mb-4 rounded-2xl border border-[#2a2a2a] bg-[#121212] p-4 text-xs font-bold text-gray-400">
             Cargando datos reales de {session?.tenant.name ?? "tu negocio"}...

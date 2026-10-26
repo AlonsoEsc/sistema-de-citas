@@ -1,4 +1,5 @@
 import rateLimit from "@fastify/rate-limit";
+import { industryProfile } from "@citas/shared/industries";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -101,6 +102,47 @@ export async function portalRoutes(app: FastifyInstance) {
       await portal.register(rateLimit, { max: 100, timeWindow: "1 minute" });
       portal.addHook("preHandler", resolvePortalTenant);
       const routes = portal.withTypeProvider<ZodTypeProvider>();
+
+      routes.get(
+        "/profile",
+        {
+          schema: {
+            tags,
+            summary: "Datos publicos del negocio para el portal de reservas",
+            params: tenantParams,
+            response: {
+              200: z.object({
+                name: z.string(),
+                slug: z.string(),
+                industry: z.string(),
+                vocabulary: z.object({
+                  customer: z.tuple([z.string(), z.string()]),
+                  staff: z.tuple([z.string(), z.string()]),
+                  service: z.tuple([z.string(), z.string()]),
+                  appointment: z.tuple([z.string(), z.string()]),
+                }),
+                timezone: z.string(),
+                currency: z.string(),
+                locale: z.string(),
+                bookingOpen: z.boolean(),
+              }),
+            },
+          },
+        },
+        async (request) => {
+          const tenant = await tenantOf(request);
+          return {
+            name: tenant.name,
+            slug: tenant.slug,
+            industry: tenant.industry,
+            vocabulary: industryProfile(tenant.industry).vocabulary,
+            timezone: tenant.timezone,
+            currency: tenant.currency,
+            locale: tenant.locale,
+            bookingOpen: tenant.access === "full",
+          };
+        },
+      );
 
       routes.get(
         "/services",
