@@ -50,12 +50,13 @@ export function interpolate(template: string, payload: NotificationPayload) {
 
 /**
  * Texto final de una notificacion: plantilla del negocio si existe; si no, el mensaje que
- * la API dejo en el payload; como ultimo recurso, un texto generico.
+ * la API dejo en el payload; como ultimo recurso, un texto generico. Devuelve `null` si el
+ * negocio desactivo esa plantilla: el aviso no se envia.
  */
 export async function renderMessage(
   prisma: PrismaClient,
   item: NotificationOutbox,
-): Promise<RenderedMessage> {
+): Promise<RenderedMessage | null> {
   const payload = payloadOf(item);
   const template = await prisma.notificationTemplate.findUnique({
     where: {
@@ -66,6 +67,9 @@ export async function renderMessage(
       },
     },
   });
+  if (template && !template.enabled) {
+    return null;
+  }
   const variables = template?.variablesJson;
   const providerTemplate =
     variables && typeof variables === "object" && !Array.isArray(variables)

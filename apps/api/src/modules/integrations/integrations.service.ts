@@ -72,7 +72,7 @@ export async function listIntegrations({ db }: TenantScope) {
   return {
     configured: {
       googleCalendar: isGoogleCalendarConfigured(),
-      whatsapp: Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN),
+      sms: Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN),
       email: Boolean(env.SENDGRID_API_KEY && env.EMAIL_FROM),
     },
     connections: rows.map(publicConnection),

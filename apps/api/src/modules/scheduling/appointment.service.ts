@@ -127,8 +127,9 @@ export function listAppointments(
   return db.appointment.findMany({
     where: {
       staffId: range.staffId,
-      startAt: { gte: range.from },
-      endAt: { lte: range.to },
+      // Cualquier cita que se cruce con el rango, aunque empiece antes o termine despues.
+      startAt: { lt: range.to },
+      endAt: { gt: range.from },
     },
     include: appointmentDetails,
     orderBy: { startAt: "asc" },

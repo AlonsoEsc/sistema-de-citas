@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
+import { badRequest } from "../../shared/errors.js";
 import { toJsonValue } from "../../shared/json.js";
 import { notFoundIfMissing } from "../../shared/prisma-errors.js";
 import { idParamsSchema } from "../../shared/schemas.js";
@@ -15,6 +16,8 @@ const templateNotFound = notFoundIfMissing(
   "Plantilla no encontrada",
   "TEMPLATE_NOT_FOUND",
 );
+
+const OTP_EVENT = "auth.otp.requested";
 
 export async function templateRoutes(app: FastifyInstance) {
   const routes = app.withTypeProvider<ZodTypeProvider>();
@@ -49,6 +52,37 @@ export async function templateRoutes(app: FastifyInstance) {
           data: request.body,
         })
         .catch(templateNotFound),
+  );
+
+  // Activa o desactiva un aviso. El codigo de acceso del portal no se puede apagar:
+  // sin el, los clientes no podrian entrar a reservar.
+  routes.patch(
+    "/notifications/templates/:id",
+    {
+      preHandler: access,
+      schema: {
+        tags,
+        security,
+        params: idParamsSchema,
+        body: z.object({ enabled: z.boolean() }),
+      },
+    },
+    async (request) => {
+      const { db } = scopeOf(request);
+      const template = await db.notificationTemplate
+        .findUniqueOrThrow({ where: { id: request.params.id } })
+        .catch(templateNotFound);
+      if (!request.body.enabled && template.eventType === OTP_EVENT) {
+        throw badRequest(
+          "El código de acceso del portal no se puede desactivar",
+          "TEMPLATE_REQUIRED",
+        );
+      }
+      return db.notificationTemplate.update({
+        where: { id: template.id },
+        data: { enabled: request.body.enabled },
+      });
+    },
   );
 
   // Asocia una plantilla de WhatsApp aprobada por Meta (enviada via Evolution).

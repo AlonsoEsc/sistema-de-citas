@@ -21,7 +21,8 @@ const scheduledReportSchema = z.object({
   name: z.string().trim().min(2),
   frequency: z.enum(["daily", "weekly", "monthly"]),
   recipients: z.array(z.string().trim().min(3)).min(1),
-  format: z.enum(["pdf", "excel", "both"]),
+  // El worker adjunta CSV (se abre en Excel); los demas valores son de versiones previas.
+  format: z.enum(["csv"]).default("csv"),
   channel: z.enum(["email", "whatsapp"]),
   enabled: z.boolean().default(true),
   nextRunAt: z.iso.datetime({ offset: true }).optional(),
@@ -73,9 +74,9 @@ export async function reportRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      const scope = scopeOf(request);
-      const defaults = currentMonthRange(await tenantOf(request));
-      return getOverview(scope, {
+      const tenant = await tenantOf(request);
+      const defaults = currentMonthRange(tenant);
+      return getOverview(scopeOf(request), tenant, {
         from: request.query.from ? new Date(request.query.from) : defaults.from,
         to: request.query.to ? new Date(request.query.to) : defaults.to,
       });

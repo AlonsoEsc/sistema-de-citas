@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createPrismaClient } from "@citas/db";
 import { enqueueScheduledNotifications } from "../src/scheduler/reminders.js";
+import { renderMessage } from "../src/outbox/render.js";
 import { runScheduledReports } from "../src/scheduler/scheduled-reports.js";
 
 const prisma = createPrismaClient();
@@ -135,7 +136,7 @@ test("los reportes programados se envian por correo con CSV y se reagendan", asy
       name: "Diario",
       frequency: "daily",
       recipientsJson: ["dueno@qa-worker.local"],
-      format: "excel",
+      format: "csv",
       channel: "email",
       nextRunAt: new Date(Date.now() - 60_000),
     },
@@ -175,5 +176,37 @@ test("los reportes programados se envian por correo con CSV y se reagendan", asy
   assert.ok(
     after.nextRunAt! > new Date(),
     "queda agendado para la proxima vez",
+  );
+});
+
+// Se prueba el render y no processOutbox: este reclamaria tambien avisos de otros negocios.
+test("un aviso con la plantilla desactivada no se envia", async () => {
+  const template = await prisma.notificationTemplate.create({
+    data: {
+      tenantId,
+      channel: "email",
+      eventType: "appointment.cancelled",
+      body: "Tu cita fue cancelada",
+      enabled: false,
+    },
+  });
+  const item = await prisma.notificationOutbox.create({
+    data: {
+      tenantId,
+      channel: "email",
+      eventType: "appointment.cancelled",
+      to: "cliente@qa-worker.local",
+      payloadJson: { message: "Tu cita fue cancelada" },
+    },
+  });
+  assert.equal(await renderMessage(prisma, item), null);
+
+  await prisma.notificationTemplate.update({
+    where: { id: template.id },
+    data: { enabled: true },
+  });
+  assert.equal(
+    (await renderMessage(prisma, item))?.body,
+    "Tu cita fue cancelada",
   );
 });

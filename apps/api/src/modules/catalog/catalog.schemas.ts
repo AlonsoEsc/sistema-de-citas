@@ -43,7 +43,8 @@ export const scheduleSegmentSchema = z
     "Los descansos deben estar dentro de la jornada",
   );
 
-export const scheduleInputSchema = z.array(scheduleSegmentSchema).min(1);
+/** Horario semanal completo; vacio significa que el profesional no atiende por ahora. */
+export const scheduleInputSchema = z.array(scheduleSegmentSchema);
 
 export const serviceInputSchema = z.object({
   name: z.string().trim().min(2),

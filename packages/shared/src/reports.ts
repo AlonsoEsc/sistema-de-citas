@@ -48,3 +48,60 @@ export function summarizeAppointments(rows: ReportAppointment[]) {
     ),
   };
 }
+
+export type BreakdownAppointment = {
+  /** Fecha de calendario (YYYY-MM-DD) en la zona horaria del negocio. */
+  day: string;
+  status: string;
+  priceCents: number;
+  services: Array<{ serviceId: string; name: string; priceCents: number }>;
+};
+
+export type DaySummary = {
+  date: string;
+  appointments: number;
+  revenueCents: number;
+};
+
+export type ServiceSummary = {
+  serviceId: string;
+  name: string;
+  appointments: number;
+  revenueCents: number;
+};
+
+/** Citas e ingresos por dia y por servicio, para las graficas del panel. */
+export function breakdownAppointments(rows: BreakdownAppointment[]) {
+  const byDay = new Map<string, DaySummary>();
+  const byService = new Map<string, ServiceSummary>();
+  for (const row of rows) {
+    const counts = REVENUE_STATUSES.has(row.status);
+    const day = byDay.get(row.day) ?? {
+      date: row.day,
+      appointments: 0,
+      revenueCents: 0,
+    };
+    day.appointments += 1;
+    day.revenueCents += counts ? row.priceCents : 0;
+    byDay.set(row.day, day);
+
+    for (const service of row.services) {
+      const summary = byService.get(service.serviceId) ?? {
+        serviceId: service.serviceId,
+        name: service.name,
+        appointments: 0,
+        revenueCents: 0,
+      };
+      summary.appointments += 1;
+      summary.revenueCents += counts ? service.priceCents : 0;
+      byService.set(service.serviceId, summary);
+    }
+  }
+  return {
+    byDay: [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date)),
+    byService: [...byService.values()].sort(
+      (a, b) =>
+        b.appointments - a.appointments || b.revenueCents - a.revenueCents,
+    ),
+  };
+}

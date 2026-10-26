@@ -130,6 +130,13 @@ async function markSent(
   ]);
 }
 
+async function markSkipped(prisma: PrismaClient, item: NotificationOutbox) {
+  await prisma.notificationOutbox.update({
+    where: { id: item.id },
+    data: { status: "skipped", lockedAt: null, lockedBy: null },
+  });
+}
+
 async function markFailedAttempt(
   prisma: PrismaClient,
   item: NotificationOutbox,
@@ -160,7 +167,12 @@ export async function processOutbox(
   );
   for (const item of pending) {
     try {
-      const delivery = { item, message: await renderMessage(prisma, item) };
+      const message = await renderMessage(prisma, item);
+      if (!message) {
+        await markSkipped(prisma, item);
+        continue;
+      }
+      const delivery = { item, message };
       await markSent(prisma, delivery, await send(prisma, delivery));
     } catch (error) {
       await markFailedAttempt(prisma, item, error);

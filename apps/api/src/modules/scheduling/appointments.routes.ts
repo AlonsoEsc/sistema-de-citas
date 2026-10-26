@@ -13,8 +13,8 @@ const tags = ["citas"];
 const security = [{ bearerAuth: [] }];
 const manage = adminAccess(PERMISSIONS.appointmentsManage);
 
-// El panel actual carga ~3 anios de citas; se reducira cuando pagine (fase 3 de la hoja de ruta).
-const MAX_RANGE_DAYS = 1100;
+// El panel pide la semana o el mes visible; los reportes usan /reports/overview.
+const MAX_RANGE_DAYS = 93;
 
 const statusSchema = z.enum([
   "pending",

@@ -55,4 +55,18 @@ export async function customerRoutes(app: FastifyInstance) {
         request.body,
       ),
   );
+
+  routes.delete(
+    "/customers/:id",
+    {
+      preHandler: adminAccess(PERMISSIONS.customersManage),
+      schema: { tags, security, params: idParamsSchema },
+    },
+    async (request) =>
+      customers.deleteCustomer(
+        scopeOf(request),
+        request.params.id,
+        request.auth!.userId,
+      ),
+  );
 }

@@ -63,6 +63,8 @@ enum OutboxStatus {
   processing
   sent
   failed
+  /// No se envio porque el negocio desactivo esa plantilla.
+  skipped
 }
 
 enum MessageDirection {
@@ -446,6 +448,8 @@ model NotificationTemplate {
   eventType     String
   subject       String?
   body          String
+  /// Si es false, ese aviso no se envia por ese canal.
+  enabled       Boolean             @default(true)
   variablesJson Json?
   tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -598,7 +602,8 @@ model ScheduledReport {
   name           String
   frequency      String
   recipientsJson Json
-  format         String
+  /// Formato del adjunto. Hoy solo "csv" (se abre en Excel o Sheets).
+  format         String              @default("csv")
   channel        NotificationChannel
   enabled        Boolean             @default(true)
   lastSentAt     DateTime?

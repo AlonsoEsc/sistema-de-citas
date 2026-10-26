@@ -139,8 +139,6 @@ export async function listConversations(
   );
 
   return {
-    paused: true,
-    pauseReason: "manual_user_pause",
     providerStatus: connection?.status ?? "disconnected",
     conversations,
   };
