@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createPrismaClient } from "@citas/db";
 import { processInboundWhatsappMessage } from "../src/modules/messaging/assistant/index.js";
+import { grantSubscription } from "./helpers.js";
 
 const prisma = createPrismaClient();
-const tenantId = "11111111-1111-1111-1111-111111111111";
+// Negocio propio de la prueba: no depende de los datos del seed.
+const tenantId = "c3c3c3c3-0000-4000-8000-000000000014";
 const phone = "+50379990001";
-const messageIds = ["qa-menu-1", "qa-stop-1", "qa-ignored-1"];
 
 async function inbound(externalMessageId: string, text: string) {
   return processInboundWhatsappMessage(prisma, {
@@ -20,8 +21,17 @@ async function inbound(externalMessageId: string, text: string) {
   });
 }
 
+async function cleanup() {
+  await prisma.tenant.deleteMany({ where: { id: tenantId } });
+}
+
 test.before(async () => {
-  await prisma.customer.deleteMany({ where: { tenantId, phone } });
+  await cleanup();
+  await prisma.tenant.create({
+    data: { id: tenantId, name: "Asistente QA", slug: "qa-asistente" },
+  });
+  // El asistente de WhatsApp esta incluido en el plan Clinica.
+  await grantSubscription(prisma, tenantId);
   await prisma.customer.create({
     data: {
       tenantId,
@@ -33,18 +43,7 @@ test.before(async () => {
 });
 
 test.after(async () => {
-  await prisma.notificationOutbox.deleteMany({
-    where: { tenantId, idempotencyKey: { contains: ":qa:qa-" } },
-  });
-  await prisma.whatsappMessage.deleteMany({
-    where: { tenantId, provider: "qa", externalMessageId: { in: messageIds } },
-  });
-  await prisma.whatsappConversationSession.deleteMany({
-    where: { tenantId, phone },
-  });
-  await prisma.customer.deleteMany({
-    where: { tenantId, phone },
-  });
+  await cleanup();
   await prisma.$disconnect();
 });
 

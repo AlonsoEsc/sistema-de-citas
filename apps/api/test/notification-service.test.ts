@@ -7,18 +7,28 @@ import {
   queueWhatsappReply,
 } from "../src/modules/notifications/notification.service.js";
 import { tenantScope } from "../src/shared/tenant-scope.js";
+import { grantSubscription } from "./helpers.js";
 
 const prisma = createPrismaClient();
-const tenantId = "11111111-1111-1111-1111-111111111111";
+// Negocio propio de la prueba: no depende de los datos del seed.
+const tenantId = "c3c3c3c3-0000-4000-8000-000000000013";
 const scope = tenantScope(prisma, tenantId);
-const testKeys: string[] = [];
+
+async function cleanup() {
+  await prisma.tenant.deleteMany({ where: { id: tenantId } });
+}
+
+test.before(async () => {
+  await cleanup();
+  await prisma.tenant.create({
+    data: { id: tenantId, name: "Avisos QA", slug: "qa-avisos" },
+  });
+  // El plan Clinica incluye avisos por correo y por WhatsApp.
+  await grantSubscription(prisma, tenantId);
+});
 
 test.after(async () => {
-  if (testKeys.length) {
-    await prisma.notificationOutbox.deleteMany({
-      where: { idempotencyKey: { in: testKeys } },
-    });
-  }
+  await cleanup();
   await prisma.$disconnect();
 });
 
@@ -47,7 +57,6 @@ test("respeta opt-out al seleccionar canales habilitados", async () => {
 
 test("la cola de WhatsApp es idempotente", async () => {
   const key = `${tenantId}:qa:notification-idempotency`;
-  testKeys.push(key);
   const input = {
     phone: "503 7000-1234",
     message: "Mensaje QA",
