@@ -10,12 +10,11 @@ export default defineConfig({
         manualChunks: {
           icons: ["lucide-react"],
           query: ["@tanstack/react-query", "axios"],
-          motion: ["framer-motion"]
-        }
-      }
-    }
+        },
+      },
+    },
   },
   server: {
-    host: "0.0.0.0"
-  }
+    host: "0.0.0.0",
+  },
 });

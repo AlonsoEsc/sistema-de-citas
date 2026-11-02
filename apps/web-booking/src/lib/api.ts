@@ -1,10 +1,26 @@
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
-const TENANT_SLUG = import.meta.env.VITE_TENANT_SLUG ?? "demo-barberia";
+const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
 
+/**
+ * La sesion del cliente es una cookie httpOnly que la API limita a /public/{negocio}.
+ * X-Requested-With es la defensa anti-CSRF que la API exige en las escrituras.
+ */
 export const bookingApi = axios.create({
-  baseURL: API_URL
+  baseURL: API_URL,
+  withCredentials: true,
+  headers: { "X-Requested-With": "citas" },
 });
 
-export const tenantSlug = TENANT_SLUG;
+/**
+ * Negocio del portal: primer segmento de la URL (reservas.dominio.com/barberia-x).
+ * Null si la direccion no trae un identificador valido.
+ */
+function slugFromLocation() {
+  const [first] = window.location.pathname.split("/").filter(Boolean);
+  const slug = first ? decodeURIComponent(first).toLowerCase() : "";
+  return SLUG_PATTERN.test(slug) ? slug : null;
+}
+
+export const tenantSlug = slugFromLocation();

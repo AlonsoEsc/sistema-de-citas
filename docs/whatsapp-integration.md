@@ -25,9 +25,9 @@ Inbound flow:
 ## Local database
 
 ```bash
-npm --workspace apps/api run prisma:generate
-npm --workspace apps/api run prisma:deploy
-npm --workspace apps/api run prisma:seed
+npm run db:generate
+npm run db:deploy
+npm run db:seed
 ```
 
 ## Messaging infrastructure
@@ -54,7 +54,7 @@ either tag.
 ## Connect Evolution
 
 1. Create an Evolution instance using the WhatsApp Cloud API integration.
-2. In Agenda Pro open Settings → WhatsApp.
+2. In the admin panel open Settings → WhatsApp.
 3. Enter Evolution URL, global/instance API key and instance name.
 4. The API validates `connectionState`, stores credentials encrypted and configures
    `MESSAGES_UPSERT`, `MESSAGES_UPDATE`, `SEND_MESSAGE` and `CONNECTION_UPDATE`.
@@ -130,3 +130,24 @@ uses `sendText`, which is appropriate only inside an active customer-service win
 - Database backups, Redis persistence, metrics and alerting enabled.
 - Quiet hours, tenant timezone and local consent wording reviewed before launch.
 - Reminder recovery windows and no-show follow-up reviewed for each tenant.
+
+## Códigos de verificación (OTP) por WhatsApp
+
+Meta solo entrega mensajes iniciados por el negocio fuera de la ventana de 24 horas si usan
+una plantilla aprobada. Para los códigos del portal de reservas cada negocio debe crear en
+su cuenta de WhatsApp Business una plantilla de la categoría **Autenticación**:
+
+- Nombre: `codigo_verificacion`
+- Idioma: Español (`es`)
+- Botón: copiar código
+
+Todo negocio nuevo nace con su plantilla `auth.otp.requested` asociada a ese nombre
+(`kind: "authentication"`); el worker envía el código en el cuerpo y en el botón. Si el
+negocio usa otro nombre, se cambia desde Ajustes → Plantillas (o
+`PUT /notifications/templates/:id/provider`).
+
+## Cupo de mensajes
+
+Cada plan incluye un número de mensajes de WhatsApp al mes. Al agotarse, los avisos
+automáticos (confirmaciones, recordatorios) dejan de salir por WhatsApp y siguen por correo;
+las respuestas del asistente y los códigos de verificación no se bloquean.

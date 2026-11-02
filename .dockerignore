@@ -1,0 +1,16 @@
+# Solo entra al contexto lo necesario para construir: nada de secretos ni artefactos locales.
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+.claude
+logs
+output
+coverage
+docs
+infra/messaging
+packages/db/src/generated

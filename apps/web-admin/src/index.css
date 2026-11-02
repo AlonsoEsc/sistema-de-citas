@@ -1,4 +1,74 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap");
 @import "tailwindcss";
+
+/*
+ * Tokens de diseno. Los componentes usan solo nombres semanticos (bg-surface, text-ink,
+ * border-line...), asi el modo oscuro es un cambio de variables y no de clases.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #f7f8fb;
+  --surface: #ffffff;
+  --surface-muted: #f1f3f8;
+  --line: #e5e8ef;
+  --ink: #171922;
+  --ink-muted: #686e80;
+  --primary: #4438ee;
+  --primary-hover: #3529d9;
+  --primary-soft: #efefff;
+  --on-primary: #ffffff;
+  --success: #1c8f3a;
+  --success-soft: #ebf8ed;
+  --warning: #9a6700;
+  --warning-soft: #fff6dd;
+  --danger: #c62835;
+  --danger-soft: #fff1f2;
+  --shadow: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0b0e14;
+  --surface: #11151e;
+  --surface-muted: #1b2130;
+  --line: #282f3e;
+  --ink: #f5f6fb;
+  --ink-muted: #9da5b7;
+  --primary: #7a72ff;
+  --primary-hover: #8f88ff;
+  --primary-soft: #232348;
+  --on-primary: #ffffff;
+  --success: #4bd06a;
+  --success-soft: #163021;
+  --warning: #f2c14e;
+  --warning-soft: #2d281a;
+  --danger: #ff6b77;
+  --danger-soft: #341c22;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --shadow-card: var(--shadow);
+}
 
 html,
 body,
@@ -8,4 +78,13 @@ body,
 
 body {
   margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }

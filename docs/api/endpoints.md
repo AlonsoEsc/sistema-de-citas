@@ -1,54 +1,12 @@
-# API MVP Endpoints
+# Endpoints de la API
 
-## Auth
-- `POST /auth/login`
-- `POST /auth/refresh`
-- `POST /auth/logout`
+La referencia completa y siempre actualizada es el documento OpenAPI que genera la API a
+partir de sus esquemas Zod:
 
-## Tenant
-- `GET /tenants/me`
-- `PATCH /tenants/me/settings`
-- `GET /entitlements`
+- Interfaz: `http://localhost:4000/docs`
+- JSON: `http://localhost:4000/docs/json`
 
-## Staff
-- `GET /staff`
-- `POST /staff`
-- `PATCH /staff/:id`
-- `GET /staff/:id/schedule`
-- `PUT /staff/:id/schedule`
+Está activo fuera de producción, o en producción con `API_DOCS_ENABLED=true`.
 
-## Services
-- `GET /services`
-- `POST /services`
-- `PATCH /services/:id`
-
-## Customers
-- `GET /customers?search=`
-- `POST /customers`
-- `PATCH /customers/:id`
-
-## Appointments
-- `GET /appointments?from=&to=&staffId=`
-- `POST /appointments`
-- `PATCH /appointments/:id/status`
-- `PATCH /appointments/:id/reschedule`
-- `DELETE /appointments/:id`
-
-## Public Booking
-- `POST /public/:tenantSlug/auth/start`
-- `POST /public/:tenantSlug/auth/verify`
-- `GET /public/:tenantSlug/services`
-- `GET /public/:tenantSlug/staff`
-- `GET /public/:tenantSlug/availability?date=&staffId=&serviceIds=`
-- `GET /public/:tenantSlug/my-appointments` (auth cliente)
-- `POST /public/:tenantSlug/cancel` (auth cliente)
-- `POST /public/:tenantSlug/book`
-
-## Notifications
-- `GET /notifications/templates`
-- `PUT /notifications/templates/:id`
-
-## Plans
-- `GET /plans`
-- `GET /subscription`
-- `POST /subscription/upgrade`
+Organización por módulo y convenciones (errores, autenticación, aislamiento entre
+negocios): [arquitectura del backend](../architecture/backend.md).

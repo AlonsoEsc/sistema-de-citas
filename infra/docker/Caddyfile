@@ -1,0 +1,61 @@
+# Proxy y servidor estatico. Caddy obtiene y renueva los certificados HTTPS solo.
+# Las direcciones vienen del entorno (ver infra/deploy/.env.example):
+#   ADMIN_SITE=app.tudominio.com  BOOKING_SITE=reservas.tudominio.com  API_SITE=api.tudominio.com
+#   API_ORIGIN=https://api.tudominio.com
+{
+	email {$ACME_EMAIL:admin@localhost}
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+}
+
+# Archivos con hash en el nombre: cache de un ano. index.html nunca se cachea, asi cada
+# despliegue se ve de inmediato.
+(spa) {
+	encode zstd gzip
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	@html not path /assets/*
+	header @html Cache-Control "no-cache"
+	try_files {path} /index.html
+	file_server
+}
+
+{$ADMIN_SITE} {
+	import security_headers
+	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' {$API_ORIGIN} https://*.ingest.sentry.io https://*.ingest.us.sentry.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+	header X-Frame-Options "DENY"
+	root * /srv/admin
+	import spa
+}
+
+# El portal carga Google y Facebook solo si el negocio activo el inicio social.
+{$BOOKING_SITE} {
+	import security_headers
+	header Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com https://connect.facebook.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' {$API_ORIGIN} https://accounts.google.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io; frame-src https://accounts.google.com https://www.facebook.com https://web.facebook.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+	root * /srv/booking
+	import spa
+}
+
+{$API_SITE} {
+	import security_headers
+	encode zstd gzip
+	# Mientras la API reinicia (despliegue), las peticiones esperan hasta 15 s en lugar de
+	# recibir 503 de inmediato.
+	reverse_proxy api:4000 {
+		health_uri /ready
+		health_interval 5s
+		lb_try_duration 15s
+		lb_try_interval 250ms
+	}
+}
